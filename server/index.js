@@ -9,7 +9,7 @@ import { createProjectsRepository } from './storage/projectsRepository.js'
 import { getOwnerKeyFromRequest, hashOwnerKey } from './security/ownerKey.js'
 
 const PORT = process.env.PORT || 3001
-const CORS_ALLOW_ORIGINS = process.env.CORS_ALLOW_ORIGINS || 'http://localhost:5173'
+const CORS_ALLOW_ORIGINS = process.env.CORS_ALLOW_ORIGINS || 'http://localhost:5173,http://localhost:5177'
 const DATA_DIR = process.env.DATA_DIR
 const DATABASE_PATH = process.env.DATABASE_PATH
 

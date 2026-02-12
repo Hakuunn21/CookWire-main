@@ -42,7 +42,7 @@ export default function ProjectBrowser({ open, onClose, projects, loading, error
                 backgroundColor: theme.custom.surfaceContainer,
               })}
               secondaryAction={
-                <Button variant="contained" onClick={() => onLoadProject(project.id)}>
+                <Button variant="contained" color="primary" onClick={() => onLoadProject(project.id)}>
                   {t('load')}
                 </Button>
               }

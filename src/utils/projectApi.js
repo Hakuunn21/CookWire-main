@@ -32,12 +32,12 @@ const jsonRequest = async (path, { method = 'GET', ownerKey, body } = {}) => {
 
 export const listProjects = async (ownerKey) => {
   const payload = await jsonRequest('/projects', { ownerKey })
-  return payload.data || []
+  return payload?.data || []
 }
 
 export const getProject = async (ownerKey, id) => {
   const payload = await jsonRequest(`/projects/${id}`, { ownerKey })
-  return payload.data
+  return payload?.data
 }
 
 export const createProject = async (ownerKey, project) => {
@@ -46,7 +46,7 @@ export const createProject = async (ownerKey, project) => {
     ownerKey,
     body: project,
   })
-  return payload.data
+  return payload?.data
 }
 
 export const updateProject = async (ownerKey, id, project) => {
@@ -55,5 +55,5 @@ export const updateProject = async (ownerKey, id, project) => {
     ownerKey,
     body: project,
   })
-  return payload.data
+  return payload?.data
 }

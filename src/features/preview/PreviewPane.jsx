@@ -1,4 +1,4 @@
-import { Box, Button, Paper, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material'
+import { Box, Paper } from '@mui/material'
 import ReactSrcDocIframe from 'react-srcdoc-iframe'
 
 function buildSrcDoc(state) {
@@ -19,76 +19,40 @@ ${state.previewFiles.html}
 </html>`
 }
 
-export default function PreviewPane({ state, dispatch, t }) {
+export default function PreviewPane({ state, t }) {
   return (
     <Paper
-      sx={{
+      sx={(theme) => ({
         height: '100%',
-        borderRadius: 4,
-        p: 1,
-        display: 'grid',
-        gridTemplateRows: 'auto 1fr',
+        borderRadius: 2,
+        p: 0.75,
+        display: 'flex',
         overflow: 'hidden',
-        backgroundColor: 'transparent',
-      }}
+        backgroundColor: theme.custom.workspaceCanvas,
+      })}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 0.75, pb: 1 }}>
-        <Typography variant="labelLarge" sx={{ mr: 'auto' }}>
-          {t('preview')}
-        </Typography>
-
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          value={state.workspacePrefs.previewMode}
-          onChange={(_event, next) => {
-            if (next) dispatch({ type: 'SET_PREVIEW_MODE', payload: next })
-          }}
-        >
-          <ToggleButton value="desktop">{t('previewDesktop')}</ToggleButton>
-          <ToggleButton value="mobile">{t('previewMobile')}</ToggleButton>
-        </ToggleButtonGroup>
-
-        {!state.editorPrefs.autoPreview ? (
-          <Button size="small" variant="text" onClick={() => dispatch({ type: 'SYNC_PREVIEW_NOW' })}>
-            Sync
-          </Button>
-        ) : null}
-      </Box>
 
       <Box
         sx={{
-          minHeight: 0,
-          borderRadius: 3,
-          p: 1,
-          display: 'flex',
-          justifyContent: 'center',
+          flex: 1,
+          borderRadius: 1.5,
+          overflow: 'hidden',
           backgroundColor: 'transparent',
-          boxShadow: 'none',
         }}
       >
-        <Box
-          sx={{
-            width: state.workspacePrefs.previewMode === 'mobile' ? 390 : '100%',
-            maxWidth: '100%',
-            borderRadius: 2,
-            overflow: 'hidden',
-            backgroundColor: 'transparent',
+        <ReactSrcDocIframe
+          key={JSON.stringify(state.previewFiles)}
+          title={t('ariaPreview')}
+          srcDoc={buildSrcDoc(state)}
+          sandbox="allow-scripts"
+          style={{
+            width: '100%',
+            height: '100%',
+            border: 0,
+            display: 'block',
+            background: 'transparent',
           }}
-        >
-          <ReactSrcDocIframe
-            title={t('ariaPreview')}
-            srcDoc={buildSrcDoc(state)}
-            sandbox="allow-scripts"
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 0,
-              display: 'block',
-              background: 'transparent',
-            }}
-          />
-        </Box>
+        />
       </Box>
     </Paper>
   )

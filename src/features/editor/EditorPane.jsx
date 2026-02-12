@@ -23,15 +23,15 @@ export default function EditorPane({
 
   return (
     <Paper
-      sx={{
+      sx={(theme) => ({
         height: '100%',
-        borderRadius: 3,
+        borderRadius: 2,
         p: 0.75,
         display: 'grid',
         gridTemplateRows: 'auto 1fr',
         overflow: 'hidden',
-        backgroundColor: 'transparent',
-      }}
+        backgroundColor: theme.custom.workspaceCanvas,
+      })}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 0.5, pb: 0.5 }}>
         <Typography variant="labelLarge">{label}</Typography>
@@ -43,7 +43,7 @@ export default function EditorPane({
       <Box
         sx={{
           minHeight: 0,
-          borderRadius: 2,
+          borderRadius: 1.5,
           overflow: 'hidden',
           backgroundColor: 'transparent',
         }}
@@ -66,7 +66,7 @@ export default function EditorPane({
           className="editor-textarea"
           placeholder={placeholderFor(fileKey)}
           style={{
-            fontFamily: '"BIZ UDPGothic", sans-serif',
+            fontFamily: '"Google Sans", sans-serif',
             fontSize: `${state.editorPrefs.fontSize}px`,
             lineHeight: state.editorPrefs.lineHeight,
             color: 'inherit',

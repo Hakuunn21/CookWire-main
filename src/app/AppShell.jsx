@@ -1,8 +1,10 @@
 import {
+  BuildRounded,
   DarkModeRounded,
   FolderOpenRounded,
   KeyboardCommandKeyRounded,
   LightModeRounded,
+  PlayArrowRounded,
   SaveRounded,
   SearchRounded,
   SettingsRounded,
@@ -15,6 +17,10 @@ import {
   BottomNavigationAction,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Drawer,
   IconButton,
   List,
@@ -38,6 +44,7 @@ import SearchReplacePanel from '../features/editor/SearchReplacePanel'
 import PreviewPane from '../features/preview/PreviewPane'
 import ProjectBrowser from '../features/project/ProjectBrowser'
 import SettingsView from '../features/settings/SettingsView'
+import MinitoolView from '../features/minitool/MinitoolView'
 import { tFor } from '../i18n'
 import { useWorkspaceDispatch, useWorkspaceState } from '../state/WorkspaceContext'
 import { formatSource } from '../utils/formatCode'
@@ -73,6 +80,10 @@ function replaceAt(content, start, end, value) {
   return `${content.slice(0, start)}${value}${content.slice(end)}`
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value))
+}
+
 export default function AppShell() {
   const state = useWorkspaceState()
   const dispatch = useWorkspaceDispatch()
@@ -81,11 +92,16 @@ export default function AppShell() {
   const medium = useMediaQuery('(min-width:600px) and (max-width:839.95px)')
   const railWidth = 84
   const drawerWidth = 264
+  const collapsedDrawerWidth = 64
+  const drawerSnapPoint =
+    collapsedDrawerWidth + (drawerWidth - collapsedDrawerWidth) * 0.45
 
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [projectsOpen, setProjectsOpen] = useState(false)
+  const [minitoolOpen, setMinitoolOpen] = useState(false)
+  const [saveLocationOpen, setSaveLocationOpen] = useState(false)
   const [projects, setProjects] = useState([])
   const [projectsLoading, setProjectsLoading] = useState(false)
   const [projectsError, setProjectsError] = useState('')
@@ -97,13 +113,34 @@ export default function AppShell() {
     cursor: -1,
   })
   const [activeNav, setActiveNav] = useState('workspace')
+  const [desktopDrawerCollapsed, setDesktopDrawerCollapsed] = useState(false)
+  const [desktopDrawerWidth, setDesktopDrawerWidth] = useState(null)
+  const [desktopDrawerDragging, setDesktopDrawerDragging] = useState(false)
 
   const t = useMemo(() => tFor(state.language), [state.language])
   const editorRefs = useRef({ html: null, css: null, js: null })
+  const drawerDragRef = useRef({
+    startX: 0,
+    startWidth: drawerWidth,
+    liveWidth: drawerWidth,
+  })
   const ownerKey = useMemo(() => getOwnerKey(), [])
   const registerEditorRef = useCallback((fileKey, node) => {
     editorRefs.current[fileKey] = node
   }, [])
+  const desktopDrawerActive = !compact && !medium
+  const drawerCurrentWidth = desktopDrawerActive
+    ? desktopDrawerWidth ?? (desktopDrawerCollapsed ? collapsedDrawerWidth : drawerWidth)
+    : drawerWidth
+  const drawerTextReveal = desktopDrawerActive
+    ? clamp(
+        (drawerCurrentWidth - (collapsedDrawerWidth + 8)) /
+          (drawerWidth - (collapsedDrawerWidth + 8)),
+        0,
+        1,
+      )
+    : 1
+  const drawerIconOnly = drawerTextReveal < 0.2
 
   const currentContent = state.files[state.activeFile]
   const searchMatches = useMemo(
@@ -262,6 +299,27 @@ export default function AppShell() {
     }
   }, [ownerKey, t])
 
+  const handleSaveToLocal = useCallback(() => {
+    try {
+      const payload = {
+        title: state.title || t('untitledProject'),
+        files: state.files,
+        language: state.language,
+        theme: state.themeMode,
+        editorPrefs: state.editorPrefs,
+        workspacePrefs: {
+          previewMode: state.workspacePrefs.previewMode,
+        },
+        savedAt: new Date().toISOString(),
+      }
+      localStorage.setItem('cookwire_project', JSON.stringify(payload))
+      setSnackbar({ type: 'success', message: 'ローカルに保存しました' })
+      setSaveLocationOpen(false)
+    } catch (error) {
+      setSnackbar({ type: 'error', message: 'ローカル保存に失敗しました' })
+    }
+  }, [state, t])
+
   const handleSaveProject = useCallback(async () => {
     dispatch({
       type: 'SET_CLOUD_STATE',
@@ -291,6 +349,7 @@ export default function AppShell() {
         },
       })
       setSnackbar({ type: 'success', message: t('saveSuccess') })
+      setSaveLocationOpen(false)
     } catch (error) {
       dispatch({
         type: 'SET_CLOUD_STATE',
@@ -344,6 +403,48 @@ export default function AppShell() {
         state.workspacePrefs.previewMode === 'desktop' ? 'mobile' : 'desktop',
     })
   }, [dispatch, state.workspacePrefs.previewMode])
+
+  const handleDrawerDragStart = useCallback(
+    (event) => {
+      if (!desktopDrawerActive) return
+      event.preventDefault()
+      if (event.currentTarget.setPointerCapture) {
+        event.currentTarget.setPointerCapture(event.pointerId)
+      }
+      const startWidth = desktopDrawerCollapsed ? collapsedDrawerWidth : drawerWidth
+      drawerDragRef.current = {
+        startX: event.clientX,
+        startWidth,
+        liveWidth: startWidth,
+      }
+      setDesktopDrawerWidth(startWidth)
+      setDesktopDrawerDragging(true)
+    },
+    [desktopDrawerActive, desktopDrawerCollapsed, collapsedDrawerWidth, drawerWidth],
+  )
+
+  const handleDrawerDragMove = useCallback(
+    (event) => {
+      if (!desktopDrawerDragging) return
+      const delta = event.clientX - drawerDragRef.current.startX
+      const nextWidth = clamp(
+        drawerDragRef.current.startWidth + delta,
+        collapsedDrawerWidth,
+        drawerWidth,
+      )
+      drawerDragRef.current.liveWidth = nextWidth
+      setDesktopDrawerWidth(nextWidth)
+    },
+    [desktopDrawerDragging, collapsedDrawerWidth, drawerWidth],
+  )
+
+  const handleDrawerDragEnd = useCallback(() => {
+    if (!desktopDrawerDragging) return
+    const snappedOpen = drawerDragRef.current.liveWidth >= drawerSnapPoint
+    setDesktopDrawerCollapsed(!snappedOpen)
+    setDesktopDrawerWidth(null)
+    setDesktopDrawerDragging(false)
+  }, [desktopDrawerDragging, drawerSnapPoint])
 
   const toggleCommentSelection = useCallback(() => {
     const target = editorRefs.current[state.activeFile]
@@ -429,12 +530,31 @@ export default function AppShell() {
         setSearchOpen(false)
         setProjectsOpen(false)
         setSettingsOpen(false)
+        setActiveNav((prev) => (prev === 'settings' ? 'workspace' : prev))
       }
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [dispatch, handleSaveProject, toggleCommentSelection])
+
+  useEffect(() => {
+    if (!desktopDrawerDragging) return
+    window.addEventListener('pointermove', handleDrawerDragMove)
+    window.addEventListener('pointerup', handleDrawerDragEnd)
+    window.addEventListener('pointercancel', handleDrawerDragEnd)
+    return () => {
+      window.removeEventListener('pointermove', handleDrawerDragMove)
+      window.removeEventListener('pointerup', handleDrawerDragEnd)
+      window.removeEventListener('pointercancel', handleDrawerDragEnd)
+    }
+  }, [desktopDrawerDragging, handleDrawerDragEnd, handleDrawerDragMove])
+
+  useEffect(() => {
+    if (desktopDrawerActive) return
+    setDesktopDrawerWidth(null)
+    setDesktopDrawerDragging(false)
+  }, [desktopDrawerActive])
 
   const commands = useMemo(
     () => [
@@ -518,6 +638,7 @@ export default function AppShell() {
     () => [
       { key: 'workspace', label: t('workspace'), icon: <TerminalRounded /> },
       { key: 'projects', label: t('projects'), icon: <FolderOpenRounded /> },
+      { key: 'minitool', label: t('minitool'), icon: <BuildRounded /> },
       { key: 'settings', label: t('settings'), icon: <SettingsRounded /> },
     ],
     [t],
@@ -545,11 +666,14 @@ export default function AppShell() {
   const activateDestination = useCallback(
     (key) => {
       setActiveNav(key)
+      if (key === 'settings') {
+        setSettingsOpen(true)
+      }
       if (key === 'projects') {
         void handleOpenProjects()
       }
-      if (key === 'settings') {
-        setSettingsOpen(true)
+      if (key === 'minitool') {
+        setMinitoolOpen(true)
       }
     },
     [handleOpenProjects],
@@ -664,51 +788,160 @@ export default function AppShell() {
     </Paper>
   ) : null
 
-  const drawerNavigation = !compact && !medium ? (
-    <Drawer
-      variant="permanent"
-      open
+  const drawerNavigation = desktopDrawerActive ? (
+    <Box
       sx={{
-        width: drawerWidth,
+        position: 'relative',
+        width: drawerCurrentWidth,
+        minWidth: drawerCurrentWidth,
         flexShrink: 0,
-        '& .MuiDrawer-paper': {
-          width: drawerWidth,
-          position: 'relative',
-          boxSizing: 'border-box',
-          border: 'none',
-          borderRadius: 4,
-          p: 0.75,
-        },
       }}
     >
-      <List sx={{ p: 0, display: 'grid', gap: 0.5, px: 0.5 }}>
-        {navDestinations.map((item) => (
-          <ListItemButton
-            key={item.key}
-            selected={activeNav === item.key}
-            onClick={() => activateDestination(item.key)}
-            sx={{ minHeight: 52, px: 1.75 }}
-          >
-            <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItemButton>
-        ))}
-        {actionDestinations.map((item) => (
-          <ListItemButton
-            key={item.key}
-            onClick={() => runSidebarAction(item.key)}
-            sx={{ minHeight: 50, px: 1.75 }}
-          >
-            <ListItemIcon sx={{ minWidth: 36, color: 'inherit' }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText primary={item.label} />
-          </ListItemButton>
-        ))}
-      </List>
-    </Drawer>
+      <Drawer
+        variant="permanent"
+        open
+        sx={(theme) => ({
+          width: drawerCurrentWidth,
+          minWidth: drawerCurrentWidth,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: drawerCurrentWidth,
+            minWidth: drawerCurrentWidth,
+            overflow: 'hidden',
+            position: 'relative',
+            boxSizing: 'border-box',
+            border: 'none',
+            borderRadius: 4,
+            p: 0.75,
+            transition: desktopDrawerDragging
+              ? 'none'
+              : theme.transitions.create('width', {
+                  duration: 360,
+                  easing: 'cubic-bezier(0.2, 0.9, 0.22, 1.05)',
+                }),
+          },
+        })}
+      >
+        <List
+          sx={(theme) => ({
+            p: 0,
+            display: 'grid',
+            gap: 0.5,
+            px: 0.5,
+            transition: desktopDrawerDragging
+              ? 'none'
+              : [
+                  `padding 220ms ${theme.transitions.easing.easeOut}`,
+                ].join(', '),
+          })}
+        >
+          {navDestinations.map((item) => (
+            <ListItemButton
+              key={item.key}
+              selected={activeNav === item.key}
+              onClick={() => activateDestination(item.key)}
+              aria-label={item.label}
+              sx={{
+                minHeight: 52,
+                px: drawerIconOnly ? 0 : 1.75,
+                justifyContent: drawerIconOnly ? 'center' : 'flex-start',
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: drawerIconOnly ? 0 : 36,
+                  mr: drawerIconOnly ? 0 : 0.5,
+                  color: 'inherit',
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+              {drawerIconOnly ? null : (
+                <ListItemText
+                  primary={item.label}
+                  sx={(theme) => ({
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    maxWidth: `${drawerTextReveal * 132}px`,
+                    opacity: drawerTextReveal,
+                    transform: `translateX(${(1 - drawerTextReveal) * -8}px)`,
+                    transition: desktopDrawerDragging
+                      ? 'none'
+                      : [
+                          `opacity 180ms ${theme.transitions.easing.easeOut}`,
+                          `transform 220ms ${theme.transitions.easing.easeOut}`,
+                          `max-width 220ms ${theme.transitions.easing.easeOut}`,
+                        ].join(', '),
+                  })}
+                />
+              )}
+            </ListItemButton>
+          ))}
+          {actionDestinations.map((item) => (
+            <ListItemButton
+              key={item.key}
+              onClick={() => runSidebarAction(item.key)}
+              aria-label={item.label}
+              sx={{
+                minHeight: 50,
+                px: drawerIconOnly ? 0 : 1.75,
+                justifyContent: drawerIconOnly ? 'center' : 'flex-start',
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: drawerIconOnly ? 0 : 36,
+                  mr: drawerIconOnly ? 0 : 0.5,
+                  color: 'inherit',
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+              {drawerIconOnly ? null : (
+                <ListItemText
+                  primary={item.label}
+                  sx={(theme) => ({
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    maxWidth: `${drawerTextReveal * 132}px`,
+                    opacity: drawerTextReveal,
+                    transform: `translateX(${(1 - drawerTextReveal) * -8}px)`,
+                    transition: desktopDrawerDragging
+                      ? 'none'
+                      : [
+                          `opacity 180ms ${theme.transitions.easing.easeOut}`,
+                          `transform 220ms ${theme.transitions.easing.easeOut}`,
+                          `max-width 220ms ${theme.transitions.easing.easeOut}`,
+                        ].join(', '),
+                  })}
+                />
+              )}
+            </ListItemButton>
+          ))}
+        </List>
+      </Drawer>
+
+      <Box
+        role="presentation"
+        aria-label={t('sidebarSnapHandle')}
+        onPointerDown={handleDrawerDragStart}
+        sx={{
+          position: 'absolute',
+          top: 0,
+          right: -10,
+          bottom: 0,
+          width: 20,
+          zIndex: 3,
+          cursor: desktopDrawerDragging ? 'grabbing' : 'ew-resize',
+          touchAction: 'none',
+          backgroundColor: 'transparent',
+        }}
+      />
+    </Box>
   ) : null
 
   return (
@@ -717,7 +950,8 @@ export default function AppShell() {
         <Toolbar
           sx={{
             minHeight: 64,
-            px: { xs: 1, sm: 2 },
+            pl: { xs: 1, sm: 4.75 },
+            pr: { xs: 1, sm: 2 },
             gap: 0.5,
             justifyContent: 'space-between',
           }}
@@ -729,6 +963,7 @@ export default function AppShell() {
                 fontSize: { xs: 26, sm: 30 },
                 lineHeight: 1,
                 fontWeight: 700,
+                fontFamily: '"BIZ UDPGothic", sans-serif',
               }}
             >
               {t('appName')}
@@ -776,8 +1011,20 @@ export default function AppShell() {
             </Tooltip>
             <Button
               variant="contained"
+              startIcon={<PlayArrowRounded />}
+              onClick={() => {
+                dispatch({ type: 'SYNC_PREVIEW_NOW' })
+                setSnackbar({ type: 'success', message: t('previewUpdated') || 'Preview updated' })
+              }}
+              sx={{ ml: 0.5 }}
+            >
+              {compact ? 'Run' : t('run')}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
               startIcon={<SaveRounded />}
-              onClick={() => void handleSaveProject()}
+              onClick={() => setSaveLocationOpen(true)}
               disabled={state.cloud.saving}
               sx={{ ml: 0.5 }}
             >
@@ -799,7 +1046,7 @@ export default function AppShell() {
             ? '1fr'
             : medium
               ? `${railWidth}px minmax(0, 1fr)`
-              : `${drawerWidth}px minmax(0, 1fr)`,
+              : `${drawerCurrentWidth}px minmax(0, 1fr)`,
           gap: 0.75,
         }}
       >
@@ -813,10 +1060,10 @@ export default function AppShell() {
             height: '100%',
             display: 'grid',
             gridTemplateRows: compact ? 'auto minmax(0, 1fr) auto' : 'minmax(0, 1fr)',
-            gap: 1,
+            gap: compact ? 1 : '4px',
             borderRadius: 4,
-            p: 1,
-            backgroundColor: theme.custom.workspaceCanvas,
+            p: compact ? 1 : '4px',
+            backgroundColor: theme.custom.surfaceContainer,
           })}
         >
           {compact ? (
@@ -845,7 +1092,7 @@ export default function AppShell() {
           ) : null}
 
           <Box
-            sx={{
+            sx={(theme) => ({
               minHeight: 0,
               height: '100%',
               display: 'grid',
@@ -853,8 +1100,14 @@ export default function AppShell() {
                 ? '1fr'
                 : 'minmax(0, 1fr) minmax(0, 1fr)',
               gridTemplateRows: compact ? '1fr' : 'repeat(2, minmax(0, 1fr))',
-              gap: 1,
-            }}
+              gap: compact ? 1 : '4px',
+              p: compact ? 0 : '4px',
+              borderRadius: compact ? 0 : 3,
+              overflow: 'hidden',
+              backgroundColor: compact
+                ? 'transparent'
+                : theme.palette.background.paper,
+            })}
           >
             {compact && state.workspacePrefs.mobilePane === 'editor' ? (
               <EditorWorkspace
@@ -865,7 +1118,7 @@ export default function AppShell() {
               />
             ) : null}
             {compact && state.workspacePrefs.mobilePane === 'preview' ? (
-              <PreviewPane state={state} dispatch={dispatch} t={t} />
+              <PreviewPane state={state} t={t} />
             ) : null}
             {!compact ? (
               <>
@@ -893,7 +1146,7 @@ export default function AppShell() {
                   t={t}
                   onRegisterEditorRef={registerEditorRef}
                 />
-                <PreviewPane state={state} dispatch={dispatch} t={t} />
+                <PreviewPane state={state} t={t} />
               </>
             ) : null}
           </Box>
@@ -950,6 +1203,11 @@ export default function AppShell() {
               icon={<FolderOpenRounded />}
             />
             <BottomNavigationAction
+              value="minitool"
+              label={t('minitool')}
+              icon={<BuildRounded />}
+            />
+            <BottomNavigationAction
               value="settings"
               label={t('settings')}
               icon={<SettingsRounded />}
@@ -1004,11 +1262,63 @@ export default function AppShell() {
 
       <SettingsView
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={() => {
+          setSettingsOpen(false)
+          if (activeNav === 'settings') {
+            setActiveNav('workspace')
+          }
+        }}
         state={state}
         dispatch={dispatch}
         t={t}
       />
+
+      <MinitoolView
+        open={minitoolOpen}
+        onClose={() => {
+          setMinitoolOpen(false)
+          if (activeNav === 'minitool') {
+            setActiveNav('workspace')
+          }
+        }}
+        t={t}
+      />
+
+      <Dialog
+        open={saveLocationOpen}
+        onClose={() => setSaveLocationOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>{t('selectSaveLocation')}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              startIcon={<SaveRounded />}
+              onClick={() => void handleSaveProject()}
+              disabled={state.cloud.saving}
+            >
+              {t('saveToServer')}
+            </Button>
+            <Button
+              variant="outlined"
+              fullWidth
+              startIcon={<SaveRounded />}
+              onClick={handleSaveToLocal}
+            >
+              {t('saveToLocal')}
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSaveLocationOpen(false)} variant="text">
+            {t('close')}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={Boolean(snackbar.message)}

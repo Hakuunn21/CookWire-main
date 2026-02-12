@@ -45,7 +45,7 @@ export default function SearchReplacePanel({
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onFindNext}>{t('findNext')}</Button>
         <Button onClick={onReplaceNext}>{t('replaceNext')}</Button>
-        <Button onClick={onReplaceAll} variant="contained">
+        <Button onClick={onReplaceAll} variant="contained" color="primary">
           {t('replaceAll')}
         </Button>
       </DialogActions>

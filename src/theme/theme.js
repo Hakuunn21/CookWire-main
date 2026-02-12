@@ -17,15 +17,15 @@ const TOKENS = {
     outline: '#3c4c61',
   },
   light: {
-    primary: '#edf2f6',
-    onPrimary: '#1b2430',
-    primaryContainer: '#edf2f6',
-    onPrimaryContainer: '#1b2430',
+    primary: '#1a73e8',
+    onPrimary: '#ffffff',
+    primaryContainer: '#d3e3fd',
+    onPrimaryContainer: '#001a41',
     background: '#edf2f6',
     surface: '#edf2f6',
     surfaceContainer: '#edf2f6',
     surfaceContainerHigh: '#edf2f6',
-    workspaceCanvas: '#e6edf4',
+    workspaceCanvas: '#fafaf8',
     mainDisplay: '#dfe5eb',
     onSurface: '#1b2430',
     onSurfaceVariant: '#556577',
@@ -46,7 +46,7 @@ export const createAppTheme = (mode = 'dark') => {
     },
     shadows: flatShadows,
     typography: {
-      fontFamily: '"BIZ UDPGothic", sans-serif',
+      fontFamily: '"Google Sans", sans-serif',
       titleLarge: { fontWeight: 700, fontSize: 22, lineHeight: 1.25 },
       titleMedium: { fontWeight: 650, fontSize: 16, lineHeight: 1.35 },
       bodyLarge: { fontWeight: 500, fontSize: 15, lineHeight: 1.55 },
@@ -166,11 +166,18 @@ export const createAppTheme = (mode = 'dark') => {
             minHeight: 40,
             paddingInline: 16,
           },
+          containedPrimary: {
+            backgroundColor: c.primary,
+            color: c.onPrimary,
+            '&:hover': {
+              backgroundColor: mode === 'light' ? '#1557b0' : alpha(c.primary, 0.9),
+            },
+          },
           contained: {
             backgroundColor: c.surface,
             color: c.onSurface,
             '&:hover': {
-              backgroundColor: c.surface,
+              backgroundColor: alpha(c.onSurface, 0.05),
             },
           },
           text: {
