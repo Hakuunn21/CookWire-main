@@ -9,6 +9,10 @@ import {
   SearchRounded,
   SettingsRounded,
   TerminalRounded,
+  LoginRounded,
+  HtmlRounded,
+  CssRounded,
+  JavascriptRounded,
 } from '@mui/icons-material'
 import {
   Alert,
@@ -91,7 +95,7 @@ export default function AppShell() {
   const compact = useMediaQuery('(max-width:599.95px)')
   const medium = useMediaQuery('(min-width:600px) and (max-width:839.95px)')
   const railWidth = 84
-  const drawerWidth = 264
+  const drawerWidth = 224
   const collapsedDrawerWidth = 64
   const drawerSnapPoint =
     collapsedDrawerWidth + (drawerWidth - collapsedDrawerWidth) * 0.45
@@ -135,11 +139,11 @@ export default function AppShell() {
     : drawerWidth
   const drawerTextReveal = desktopDrawerActive
     ? clamp(
-        (drawerCurrentWidth - (collapsedDrawerWidth + 8)) /
-          (drawerWidth - (collapsedDrawerWidth + 8)),
-        0,
-        1,
-      )
+      (drawerCurrentWidth - (collapsedDrawerWidth + 8)) /
+      (drawerWidth - (collapsedDrawerWidth + 8)),
+      0,
+      1,
+    )
     : 1
   const drawerIconOnly = drawerTextReveal < 0.2
 
@@ -832,12 +836,14 @@ export default function AppShell() {
             border: 'none',
             borderRadius: 4,
             p: 0.75,
+            display: 'flex',
+            flexDirection: 'column',
             transition: desktopDrawerDragging
               ? 'none'
               : theme.transitions.create('width', {
-                  duration: 360,
-                  easing: 'cubic-bezier(0.2, 0.9, 0.22, 1.05)',
-                }),
+                duration: 360,
+                easing: 'cubic-bezier(0.2, 0.9, 0.22, 1.05)',
+              }),
           },
         })}
       >
@@ -850,8 +856,8 @@ export default function AppShell() {
             transition: desktopDrawerDragging
               ? 'none'
               : [
-                  `padding 220ms ${theme.transitions.easing.easeOut}`,
-                ].join(', '),
+                `padding 220ms ${theme.transitions.easing.easeOut}`,
+              ].join(', '),
           })}
         >
           {navDestinations.map((item) => (
@@ -889,10 +895,10 @@ export default function AppShell() {
                     transition: desktopDrawerDragging
                       ? 'none'
                       : [
-                          `opacity 180ms ${theme.transitions.easing.easeOut}`,
-                          `transform 220ms ${theme.transitions.easing.easeOut}`,
-                          `max-width 220ms ${theme.transitions.easing.easeOut}`,
-                        ].join(', '),
+                        `opacity 180ms ${theme.transitions.easing.easeOut}`,
+                        `transform 220ms ${theme.transitions.easing.easeOut}`,
+                        `max-width 220ms ${theme.transitions.easing.easeOut}`,
+                      ].join(', '),
                   })}
                 />
               )}
@@ -932,16 +938,61 @@ export default function AppShell() {
                     transition: desktopDrawerDragging
                       ? 'none'
                       : [
-                          `opacity 180ms ${theme.transitions.easing.easeOut}`,
-                          `transform 220ms ${theme.transitions.easing.easeOut}`,
-                          `max-width 220ms ${theme.transitions.easing.easeOut}`,
-                        ].join(', '),
+                        `opacity 180ms ${theme.transitions.easing.easeOut}`,
+                        `transform 220ms ${theme.transitions.easing.easeOut}`,
+                        `max-width 220ms ${theme.transitions.easing.easeOut}`,
+                      ].join(', '),
                   })}
                 />
               )}
             </ListItemButton>
           ))}
         </List>
+        <ListItemButton
+          key="login"
+          onClick={() => {
+            // TODO: Implement login logic
+            console.log('Login clicked')
+          }}
+          aria-label={t('login') || 'Log in'}
+          sx={{
+            minHeight: 50,
+            px: drawerIconOnly ? 0 : 1.75,
+            justifyContent: drawerIconOnly ? 'center' : 'flex-start',
+            mt: 'auto',
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: drawerIconOnly ? 0 : 36,
+              mr: drawerIconOnly ? 0 : 0.5,
+              color: 'inherit',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <LoginRounded />
+          </ListItemIcon>
+          {drawerIconOnly ? null : (
+            <ListItemText
+              primary={t('login') || 'Log in'}
+              sx={(theme) => ({
+                overflow: 'hidden',
+                whiteSpace: 'nowrap',
+                maxWidth: `${drawerTextReveal * 132}px`,
+                opacity: drawerTextReveal,
+                transform: `translateX(${(1 - drawerTextReveal) * -8}px)`,
+                transition: desktopDrawerDragging
+                  ? 'none'
+                  : [
+                    `opacity 180ms ${theme.transitions.easing.easeOut}`,
+                    `transform 220ms ${theme.transitions.easing.easeOut}`,
+                    `max-width 220ms ${theme.transitions.easing.easeOut}`,
+                  ].join(', '),
+              })}
+            />
+          )}
+        </ListItemButton>
       </Drawer>
 
       <Box
@@ -960,7 +1011,7 @@ export default function AppShell() {
           backgroundColor: 'transparent',
         }}
       />
-    </Box>
+    </Box >
   ) : null
 
   return (
@@ -968,11 +1019,11 @@ export default function AppShell() {
       <AppBar position="sticky" color="transparent">
         <Toolbar
           sx={{
-            minHeight: 64,
-            pl: { xs: 1, sm: 4.75 },
-            pr: { xs: 1, sm: 2 },
+            py: 1,
+            px: { xs: 1, sm: 2 },
             gap: 0.5,
             justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1056,17 +1107,17 @@ export default function AppShell() {
       <Box
         sx={{
           px: { xs: 1, sm: 2 },
-          pt: 1,
+          pt: 0.5,
           pb: compact ? '84px' : 2,
-          height: compact ? 'calc(100dvh - 64px)' : 'calc(100dvh - 64px)',
-          minHeight: compact ? 'calc(100vh - 64px)' : 'calc(100vh - 64px)',
+          height: 'calc(100dvh - 64px)',
+          minHeight: 'calc(100vh - 64px)',
           display: 'grid',
           gridTemplateColumns: compact
             ? '1fr'
             : medium
               ? `${railWidth}px minmax(0, 1fr)`
               : `${drawerCurrentWidth}px minmax(0, 1fr)`,
-          gap: 0.75,
+          gap: 0.5,
         }}
       >
         {railNavigation}
@@ -1149,7 +1200,7 @@ export default function AppShell() {
               <>
                 <EditorPane
                   fileKey="html"
-                  label={t('html')}
+                  label={<HtmlRounded />}
                   value={state.files.html}
                   editorPrefs={state.editorPrefs}
                   dispatch={dispatch}
@@ -1158,7 +1209,7 @@ export default function AppShell() {
                 />
                 <EditorPane
                   fileKey="css"
-                  label={t('css')}
+                  label={<CssRounded />}
                   value={state.files.css}
                   editorPrefs={state.editorPrefs}
                   dispatch={dispatch}
@@ -1167,7 +1218,7 @@ export default function AppShell() {
                 />
                 <EditorPane
                   fileKey="js"
-                  label={t('javascript')}
+                  label={<JavascriptRounded />}
                   value={state.files.js}
                   editorPrefs={state.editorPrefs}
                   dispatch={dispatch}
