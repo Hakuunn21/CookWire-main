@@ -13,6 +13,10 @@ import {
   HtmlRounded,
   CssRounded,
   JavascriptRounded,
+  FileDownloadRounded,
+  GavelRounded,
+  PrivacyTipRounded,
+  BusinessRounded,
 } from '@mui/icons-material'
 import {
   Alert,
@@ -54,6 +58,7 @@ import { useWorkspaceDispatch, useWorkspaceState } from '../state/WorkspaceConte
 import { formatSource } from '../utils/formatCode'
 import { getOwnerKey } from '../utils/ownerKey'
 import { createProject, getProject, listProjects, updateProject } from '../utils/projectApi'
+import JSZip from 'jszip'
 
 const LOCAL_STATE_KEY = 'cookwire-workspace-v3'
 
@@ -342,6 +347,31 @@ export default function AppShell() {
     state.workspacePrefs.previewMode,
     t,
   ])
+
+  const handleDownloadZip = useCallback(async () => {
+    try {
+      const zip = new JSZip()
+      zip.file('index.html', state.files.html)
+      zip.file('style.css', state.files.css)
+      zip.file('script.js', state.files.js)
+
+      const blob = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${state.title || 'project'}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      setSnackbar({ type: 'success', message: t('downloadSuccess') || 'ZIP Downloaded' })
+      setSaveLocationOpen(false)
+    } catch (error) {
+      console.error('ZIP generation failed:', error)
+      setSnackbar({ type: 'error', message: t('downloadError') || 'ZIP Generation Failed' })
+    }
+  }, [state.files, state.title, t])
 
   const handleSaveProject = useCallback(async () => {
     dispatch({
@@ -669,21 +699,13 @@ export default function AppShell() {
 
   const actionDestinations = useMemo(
     () => [
-      { key: 'search', label: t('searchReplace'), icon: <SearchRounded /> },
       {
         key: 'commands',
         label: t('commandPalette'),
         icon: <KeyboardCommandKeyRounded />,
       },
-      { key: 'save', label: t('saveProject'), icon: <SaveRounded /> },
-      {
-        key: 'theme',
-        label: t('toggleTheme'),
-        icon:
-          state.themeMode === 'dark' ? <LightModeRounded /> : <DarkModeRounded />,
-      },
     ],
-    [state.themeMode, t],
+    [t],
   )
 
   const activateDestination = useCallback(
@@ -949,6 +971,83 @@ export default function AppShell() {
           ))}
         </List>
         <ListItemButton
+          key="terms"
+          onClick={() => { console.log('Terms clicked') }}
+          aria-label={t('terms') || 'Terms'}
+          sx={{
+            minHeight: 50,
+            px: drawerIconOnly ? 0 : 1.75,
+            justifyContent: drawerIconOnly ? 'center' : 'flex-start',
+            mt: 'auto',
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: drawerIconOnly ? 0 : 36,
+              mr: drawerIconOnly ? 0 : 0.5,
+              color: 'inherit',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <GavelRounded />
+          </ListItemIcon>
+          {drawerIconOnly ? null : (
+            <ListItemText primary={t('terms') || 'Terms'} sx={{ opacity: drawerTextReveal }} />
+          )}
+        </ListItemButton>
+        <ListItemButton
+          key="privacy"
+          onClick={() => { console.log('Privacy clicked') }}
+          aria-label={t('privacy') || 'Privacy'}
+          sx={{
+            minHeight: 50,
+            px: drawerIconOnly ? 0 : 1.75,
+            justifyContent: drawerIconOnly ? 'center' : 'flex-start',
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: drawerIconOnly ? 0 : 36,
+              mr: drawerIconOnly ? 0 : 0.5,
+              color: 'inherit',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <PrivacyTipRounded />
+          </ListItemIcon>
+          {drawerIconOnly ? null : (
+            <ListItemText primary={t('privacy') || 'Privacy'} sx={{ opacity: drawerTextReveal }} />
+          )}
+        </ListItemButton>
+        <ListItemButton
+          key="company"
+          onClick={() => { console.log('Company clicked') }}
+          aria-label={t('company') || 'Company'}
+          sx={{
+            minHeight: 50,
+            px: drawerIconOnly ? 0 : 1.75,
+            justifyContent: drawerIconOnly ? 'center' : 'flex-start',
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: drawerIconOnly ? 0 : 36,
+              mr: drawerIconOnly ? 0 : 0.5,
+              color: 'inherit',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            <BusinessRounded />
+          </ListItemIcon>
+          {drawerIconOnly ? null : (
+            <ListItemText primary={t('company') || 'Company'} sx={{ opacity: drawerTextReveal }} />
+          )}
+        </ListItemButton>
+
+        <ListItemButton
           key="login"
           onClick={() => {
             // TODO: Implement login logic
@@ -959,7 +1058,6 @@ export default function AppShell() {
             minHeight: 50,
             px: drawerIconOnly ? 0 : 1.75,
             justifyContent: drawerIconOnly ? 'center' : 'flex-start',
-            mt: 'auto',
           }}
         >
           <ListItemIcon
@@ -993,6 +1091,12 @@ export default function AppShell() {
             />
           )}
         </ListItemButton>
+
+        {!drawerIconOnly && (
+          <Typography variant="caption" sx={{ px: 2, pb: 1, color: 'text.secondary', opacity: drawerTextReveal }}>
+            © 2024 CookWire
+          </Typography>
+        )}
       </Drawer>
 
       <Box
@@ -1372,6 +1476,7 @@ export default function AppShell() {
         onClose={() => setSaveLocationOpen(false)}
         maxWidth="xs"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 4 } }}
       >
         <DialogTitle>{t('selectSaveLocation')}</DialogTitle>
         <DialogContent>
@@ -1387,12 +1492,22 @@ export default function AppShell() {
               {t('saveToServer')}
             </Button>
             <Button
-              variant="outlined"
+              variant="contained"
+              color="primary"
               fullWidth
               startIcon={<SaveRounded />}
               onClick={handleSaveToLocal}
             >
               {t('saveToLocal')}
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              startIcon={<FileDownloadRounded />}
+              onClick={() => void handleDownloadZip()}
+            >
+              {t('downloadZip') || 'Download ZIP'}
             </Button>
           </Box>
         </DialogContent>
