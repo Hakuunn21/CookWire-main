@@ -6,9 +6,9 @@ const dictionaries = {
   ja: messagesJa,
 }
 
-export const SUPPORTED_LANGUAGES = ['en', 'ja']
+const SUPPORTED_LANGUAGES = ['en', 'ja']
 
-export const resolveLanguage = (value) => (SUPPORTED_LANGUAGES.includes(value) ? value : 'en')
+const resolveLanguage = (value) => (SUPPORTED_LANGUAGES.includes(value) ? value : 'en')
 
 export const tFor = (language) => {
   const dict = dictionaries[resolveLanguage(language)] || dictionaries.en

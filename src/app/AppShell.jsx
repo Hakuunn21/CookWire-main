@@ -119,6 +119,7 @@ export default function AppShell() {
 
   const t = useMemo(() => tFor(state.language), [state.language])
   const editorRefs = useRef({ html: null, css: null, js: null })
+  const localStorageTimerRef = useRef(null)
   const drawerDragRef = useRef({
     startX: 0,
     startWidth: drawerWidth,
@@ -172,19 +173,29 @@ export default function AppShell() {
   }, [dispatch])
 
   useEffect(() => {
-    localStorage.setItem(
-      LOCAL_STATE_KEY,
-      JSON.stringify({
-        projectId: state.projectId,
-        title: state.title,
-        files: state.files,
-        language: state.language,
-        themeMode: state.themeMode,
-        editorPrefs: state.editorPrefs,
-        workspacePrefs: state.workspacePrefs,
-        updatedAt: state.cloud.updatedAt,
-      }),
-    )
+    if (localStorageTimerRef.current) {
+      clearTimeout(localStorageTimerRef.current)
+    }
+    localStorageTimerRef.current = setTimeout(() => {
+      localStorage.setItem(
+        LOCAL_STATE_KEY,
+        JSON.stringify({
+          projectId: state.projectId,
+          title: state.title,
+          files: state.files,
+          language: state.language,
+          themeMode: state.themeMode,
+          editorPrefs: state.editorPrefs,
+          workspacePrefs: state.workspacePrefs,
+          updatedAt: state.cloud.updatedAt,
+        }),
+      )
+    }, 300)
+    return () => {
+      if (localStorageTimerRef.current) {
+        clearTimeout(localStorageTimerRef.current)
+      }
+    }
   }, [state])
 
   useEffect(() => {
@@ -318,7 +329,15 @@ export default function AppShell() {
     } catch (error) {
       setSnackbar({ type: 'error', message: 'ローカル保存に失敗しました' })
     }
-  }, [state, t])
+  }, [
+    state.title,
+    state.files,
+    state.language,
+    state.themeMode,
+    state.editorPrefs,
+    state.workspacePrefs.previewMode,
+    t,
+  ])
 
   const handleSaveProject = useCallback(async () => {
     dispatch({
@@ -1111,21 +1130,28 @@ export default function AppShell() {
           >
             {compact && state.workspacePrefs.mobilePane === 'editor' ? (
               <EditorWorkspace
-                state={state}
+                files={state.files}
+                activeFile={state.activeFile}
+                editorPrefs={state.editorPrefs}
                 dispatch={dispatch}
                 t={t}
                 onRegisterEditorRef={registerEditorRef}
               />
             ) : null}
             {compact && state.workspacePrefs.mobilePane === 'preview' ? (
-              <PreviewPane state={state} t={t} />
+              <PreviewPane
+                previewFiles={state.previewFiles}
+                language={state.language}
+                t={t}
+              />
             ) : null}
             {!compact ? (
               <>
                 <EditorPane
                   fileKey="html"
                   label={t('html')}
-                  state={state}
+                  value={state.files.html}
+                  editorPrefs={state.editorPrefs}
                   dispatch={dispatch}
                   t={t}
                   onRegisterEditorRef={registerEditorRef}
@@ -1133,7 +1159,8 @@ export default function AppShell() {
                 <EditorPane
                   fileKey="css"
                   label={t('css')}
-                  state={state}
+                  value={state.files.css}
+                  editorPrefs={state.editorPrefs}
                   dispatch={dispatch}
                   t={t}
                   onRegisterEditorRef={registerEditorRef}
@@ -1141,12 +1168,17 @@ export default function AppShell() {
                 <EditorPane
                   fileKey="js"
                   label={t('javascript')}
-                  state={state}
+                  value={state.files.js}
+                  editorPrefs={state.editorPrefs}
                   dispatch={dispatch}
                   t={t}
                   onRegisterEditorRef={registerEditorRef}
                 />
-                <PreviewPane state={state} t={t} />
+                <PreviewPane
+                  previewFiles={state.previewFiles}
+                  language={state.language}
+                  t={t}
+                />
               </>
             ) : null}
           </Box>
