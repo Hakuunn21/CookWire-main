@@ -1,14 +1,23 @@
 import { Box, Paper, Tab, Tabs, Tooltip, Typography } from '@mui/material'
 import { CodeRounded, BrushRounded, JavascriptRounded } from '@mui/icons-material'
+import { memo, useCallback, useMemo } from 'react'
 
-const files = ['html', 'css', 'js']
+const FILE_KEYS = ['html', 'css', 'js']
 
-function countLines(value) {
-  return value.split('\n').length
-}
+const EditorWorkspace = memo(function EditorWorkspace({
+  files,
+  activeFile,
+  editorPrefs,
+  dispatch,
+  t,
+  onRegisterEditorRef,
+}) {
+  const activeLines = useMemo(() => files[activeFile].split('\n').length, [files, activeFile])
 
-export default function EditorWorkspace({ state, dispatch, t, onRegisterEditorRef }) {
-  const activeLines = countLines(state.files[state.activeFile])
+  const handleTabChange = useCallback(
+    (_event, next) => dispatch({ type: 'SET_ACTIVE_FILE', payload: next }),
+    [dispatch],
+  )
 
   return (
     <Paper
@@ -23,7 +32,7 @@ export default function EditorWorkspace({ state, dispatch, t, onRegisterEditorRe
       })}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 0.75, pb: 1 }}>
-        <Tabs value={state.activeFile} onChange={(_event, next) => dispatch({ type: 'SET_ACTIVE_FILE', payload: next })}>
+        <Tabs value={activeFile} onChange={handleTabChange}>
           <Tooltip title={t('html')} arrow>
             <Tab
               value="html"
@@ -64,8 +73,8 @@ export default function EditorWorkspace({ state, dispatch, t, onRegisterEditorRe
           boxShadow: 'none',
         }}
       >
-        {files.map((fileKey) => {
-          const visible = state.activeFile === fileKey
+        {FILE_KEYS.map((fileKey) => {
+          const visible = activeFile === fileKey
           return (
             <Box key={fileKey} role="tabpanel" hidden={!visible} sx={{ display: visible ? 'block' : 'none', height: '100%' }}>
               <Box
@@ -74,7 +83,7 @@ export default function EditorWorkspace({ state, dispatch, t, onRegisterEditorRe
                   onRegisterEditorRef(fileKey, node)
                 }}
                 aria-label={`${t('ariaEditor')} ${fileKey}`}
-                value={state.files[fileKey]}
+                value={files[fileKey]}
                 onChange={(event) =>
                   dispatch({
                     type: 'SET_FILE_CONTENT',
@@ -86,8 +95,8 @@ export default function EditorWorkspace({ state, dispatch, t, onRegisterEditorRe
                 placeholder={fileKey === 'html' ? '<section>...</section>' : fileKey === 'css' ? '.class { ... }' : 'console.log()'}
                 style={{
                   fontFamily: '"Google Sans", sans-serif',
-                  fontSize: `${state.editorPrefs.fontSize}px`,
-                  lineHeight: state.editorPrefs.lineHeight,
+                  fontSize: `${editorPrefs.fontSize}px`,
+                  lineHeight: editorPrefs.lineHeight,
                   color: 'inherit',
                 }}
               />
@@ -97,4 +106,6 @@ export default function EditorWorkspace({ state, dispatch, t, onRegisterEditorRe
       </Box>
     </Paper>
   )
-}
+})
+
+export default EditorWorkspace

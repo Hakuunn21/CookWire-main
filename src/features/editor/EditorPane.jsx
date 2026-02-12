@@ -1,8 +1,5 @@
 import { Box, Paper, Typography } from '@mui/material'
-
-function countLines(value) {
-  return value.split('\n').length
-}
+import { memo, useCallback, useMemo } from 'react'
 
 function placeholderFor(fileKey) {
   if (fileKey === 'html') return '<section>...</section>'
@@ -10,16 +7,37 @@ function placeholderFor(fileKey) {
   return 'console.log()'
 }
 
-export default function EditorPane({
+const EditorPane = memo(function EditorPane({
   fileKey,
   label,
-  state,
+  value,
+  editorPrefs,
   dispatch,
   onRegisterEditorRef,
   t,
 }) {
-  const value = state.files[fileKey]
-  const lines = countLines(value)
+  const lines = useMemo(() => value.split('\n').length, [value])
+
+  const refCallback = useCallback(
+    (node) => {
+      onRegisterEditorRef(fileKey, node)
+    },
+    [fileKey, onRegisterEditorRef],
+  )
+
+  const handleFocus = useCallback(() => {
+    dispatch({ type: 'SET_ACTIVE_FILE', payload: fileKey })
+  }, [dispatch, fileKey])
+
+  const handleChange = useCallback(
+    (event) => {
+      dispatch({
+        type: 'SET_FILE_CONTENT',
+        payload: { file: fileKey, value: event.target.value },
+      })
+    },
+    [dispatch, fileKey],
+  )
 
   return (
     <Paper
@@ -50,29 +68,24 @@ export default function EditorPane({
       >
         <Box
           component="textarea"
-          ref={(node) => {
-            onRegisterEditorRef(fileKey, node)
-          }}
+          ref={refCallback}
           aria-label={`${t('ariaEditor')} ${fileKey}`}
           value={value}
-          onFocus={() => dispatch({ type: 'SET_ACTIVE_FILE', payload: fileKey })}
-          onChange={(event) =>
-            dispatch({
-              type: 'SET_FILE_CONTENT',
-              payload: { file: fileKey, value: event.target.value },
-            })
-          }
+          onFocus={handleFocus}
+          onChange={handleChange}
           spellCheck={false}
           className="editor-textarea"
           placeholder={placeholderFor(fileKey)}
           style={{
             fontFamily: '"Google Sans", sans-serif',
-            fontSize: `${state.editorPrefs.fontSize}px`,
-            lineHeight: state.editorPrefs.lineHeight,
+            fontSize: `${editorPrefs.fontSize}px`,
+            lineHeight: editorPrefs.lineHeight,
             color: 'inherit',
           }}
         />
       </Box>
     </Paper>
   )
-}
+})
+
+export default EditorPane

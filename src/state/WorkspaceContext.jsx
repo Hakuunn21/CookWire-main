@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useMemo, useReducer } from 'react'
+import { createContext, useContext, useReducer } from 'react'
 import { DEFAULT_STATE, workspaceReducer } from './workspaceReducer'
 
 const WorkspaceStateContext = createContext(null)
@@ -8,10 +8,8 @@ const WorkspaceDispatchContext = createContext(null)
 export function WorkspaceProvider({ children }) {
   const [state, dispatch] = useReducer(workspaceReducer, DEFAULT_STATE)
 
-  const stateValue = useMemo(() => state, [state])
-
   return (
-    <WorkspaceStateContext.Provider value={stateValue}>
+    <WorkspaceStateContext.Provider value={state}>
       <WorkspaceDispatchContext.Provider value={dispatch}>{children}</WorkspaceDispatchContext.Provider>
     </WorkspaceStateContext.Provider>
   )

@@ -1,25 +1,31 @@
 import { Box, Paper } from '@mui/material'
+import { memo, useMemo } from 'react'
 import ReactSrcDocIframe from 'react-srcdoc-iframe'
 
-function buildSrcDoc(state) {
+function buildSrcDoc(previewFiles, language) {
   return `<!doctype html>
-<html lang="${state.language}">
+<html lang="${language}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
 html, body { margin: 0; background: transparent; }
-${state.previewFiles.css}
+${previewFiles.css}
 </style>
 </head>
 <body>
-${state.previewFiles.html}
-<script>${state.previewFiles.js}</script>
+${previewFiles.html}
+<script>${previewFiles.js}</script>
 </body>
 </html>`
 }
 
-export default function PreviewPane({ state, t }) {
+const PreviewPane = memo(function PreviewPane({ previewFiles, language, t }) {
+  const srcDoc = useMemo(
+    () => buildSrcDoc(previewFiles, language),
+    [previewFiles, language],
+  )
+
   return (
     <Paper
       sx={(theme) => ({
@@ -41,9 +47,9 @@ export default function PreviewPane({ state, t }) {
         }}
       >
         <ReactSrcDocIframe
-          key={JSON.stringify(state.previewFiles)}
+          key={JSON.stringify(previewFiles)}
           title={t('ariaPreview')}
-          srcDoc={buildSrcDoc(state)}
+          srcDoc={srcDoc}
           sandbox="allow-scripts"
           style={{
             width: '100%',
@@ -56,4 +62,6 @@ export default function PreviewPane({ state, t }) {
       </Box>
     </Paper>
   )
-}
+})
+
+export default PreviewPane
