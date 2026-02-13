@@ -20,6 +20,8 @@ export const DEFAULT_STATE = {
   workspacePrefs: {
     previewMode: 'desktop',
     mobilePane: 'editor',
+    mobileSplitRatio: 0.55,
+    mobileConsoleOpen: false,
   },
   cloud: {
     saving: false,
@@ -110,6 +112,22 @@ export const workspaceReducer = (state, action) => {
         workspacePrefs: {
           ...state.workspacePrefs,
           mobilePane: action.payload === 'preview' ? 'preview' : 'editor',
+        },
+      }
+    case 'SET_MOBILE_SPLIT_RATIO':
+      return {
+        ...state,
+        workspacePrefs: {
+          ...state.workspacePrefs,
+          mobileSplitRatio: clamp(action.payload, 0.2, 0.85),
+        },
+      }
+    case 'SET_MOBILE_CONSOLE_OPEN':
+      return {
+        ...state,
+        workspacePrefs: {
+          ...state.workspacePrefs,
+          mobileConsoleOpen: Boolean(action.payload),
         },
       }
     case 'SET_EDITOR_PREF': {

@@ -70,6 +70,21 @@ const messages = {
   ariaPreview: 'Live preview',
   sidebarSnapHandle: 'Sidebar snap handle',
   createdAt: 'Created at',
+  downloadZip: 'Download ZIP',
+  console: 'Console',
+  consoleEmpty: 'No output yet. Tap Run to execute.',
+  consoleClear: 'Clear',
+  result: 'Result',
+  mobileMenuTitle: 'Actions',
+  format: 'Format',
+  search: 'Search',
+  share: 'Share',
+  more: 'More',
+  dragHandle: 'Drag to resize panels',
+  lines: 'lines',
+  errors: 'errors',
+  warnings: 'warnings',
+  logs: 'logs',
 }
 
 export default messages

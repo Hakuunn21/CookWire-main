@@ -53,6 +53,7 @@ import PreviewPane from '../features/preview/PreviewPane'
 import ProjectBrowser from '../features/project/ProjectBrowser'
 import SettingsView from '../features/settings/SettingsView'
 import MinitoolView from '../features/minitool/MinitoolView'
+import MobileShell from '../features/mobile/MobileShell'
 import { tFor } from '../i18n'
 import { useWorkspaceDispatch, useWorkspaceState } from '../state/WorkspaceContext'
 import { formatSource } from '../utils/formatCode'
@@ -335,7 +336,7 @@ export default function AppShell() {
       localStorage.setItem('cookwire_project', JSON.stringify(payload))
       setSnackbar({ type: 'success', message: 'ローカルに保存しました' })
       setSaveLocationOpen(false)
-    } catch (error) {
+    } catch {
       setSnackbar({ type: 'error', message: 'ローカル保存に失敗しました' })
     }
   }, [
@@ -1118,6 +1119,166 @@ export default function AppShell() {
     </Box >
   ) : null
 
+  if (compact) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <MobileShell
+          state={state}
+          dispatch={dispatch}
+          t={t}
+          onRegisterEditorRef={registerEditorRef}
+          onOpenSearch={() => setSearchOpen(true)}
+          onOpenCommands={() => setCommandPaletteOpen(true)}
+          onOpenProjects={() => {
+            setActiveNav('projects')
+            void handleOpenProjects()
+          }}
+          onOpenSettings={() => {
+            setActiveNav('settings')
+            setSettingsOpen(true)
+          }}
+          onOpenMinitool={() => {
+            setActiveNav('minitool')
+            setMinitoolOpen(true)
+          }}
+          onSave={() => void handleSaveProject()}
+          onSaveLocationOpen={() => setSaveLocationOpen(true)}
+          onToggleTheme={toggleTheme}
+          onFormat={handleFormat}
+          onRun={() => {
+            dispatch({ type: 'SYNC_PREVIEW_NOW' })
+            setSnackbar({ type: 'success', message: t('previewUpdated') || 'Preview updated' })
+          }}
+        />
+
+        <CommandPalette
+          open={commandPaletteOpen}
+          onClose={() => setCommandPaletteOpen(false)}
+          commands={commands}
+          t={t}
+        />
+
+        <SearchReplacePanel
+          open={searchOpen}
+          onClose={() => setSearchOpen(false)}
+          query={searchState.query}
+          replaceValue={searchState.replaceValue}
+          caseSensitive={searchState.caseSensitive}
+          matches={searchMatches.length}
+          onChangeQuery={(value) =>
+            setSearchState((prev) => ({ ...prev, query: value, cursor: -1 }))
+          }
+          onChangeReplace={(value) =>
+            setSearchState((prev) => ({ ...prev, replaceValue: value }))
+          }
+          onToggleCase={(checked) =>
+            setSearchState((prev) => ({
+              ...prev,
+              caseSensitive: checked,
+              cursor: -1,
+            }))
+          }
+          onFindNext={handleFindNext}
+          onReplaceNext={handleReplaceNext}
+          onReplaceAll={handleReplaceAll}
+          t={t}
+        />
+
+        <ProjectBrowser
+          open={projectsOpen}
+          onClose={() => setProjectsOpen(false)}
+          projects={projects}
+          loading={projectsLoading}
+          error={projectsError}
+          onReload={() => void loadProjectList()}
+          onLoadProject={(id) => void handleLoadProject(id)}
+          t={t}
+        />
+
+        <SettingsView
+          open={settingsOpen}
+          onClose={() => {
+            setSettingsOpen(false)
+            if (activeNav === 'settings') setActiveNav('workspace')
+          }}
+          state={state}
+          dispatch={dispatch}
+          t={t}
+        />
+
+        <MinitoolView
+          open={minitoolOpen}
+          onClose={() => {
+            setMinitoolOpen(false)
+            if (activeNav === 'minitool') setActiveNav('workspace')
+          }}
+          t={t}
+        />
+
+        <Dialog
+          open={saveLocationOpen}
+          onClose={() => setSaveLocationOpen(false)}
+          maxWidth="xs"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 4 } }}
+        >
+          <DialogTitle>{t('selectSaveLocation')}</DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                startIcon={<SaveRounded />}
+                onClick={() => void handleSaveProject()}
+                disabled={state.cloud.saving}
+              >
+                {t('saveToServer')}
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                startIcon={<SaveRounded />}
+                onClick={handleSaveToLocal}
+              >
+                {t('saveToLocal')}
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                startIcon={<FileDownloadRounded />}
+                onClick={() => void handleDownloadZip()}
+              >
+                {t('downloadZip') || 'Download ZIP'}
+              </Button>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setSaveLocationOpen(false)} variant="text">
+              {t('close')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={Boolean(snackbar.message)}
+          autoHideDuration={2400}
+          onClose={() => setSnackbar({ type: 'success', message: '' })}
+        >
+          <Alert
+            onClose={() => setSnackbar({ type: 'success', message: '' })}
+            severity={snackbar.type}
+            sx={{ width: '100%' }}
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
+    )
+  }
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="sticky" color="transparent">
@@ -1192,7 +1353,7 @@ export default function AppShell() {
               }}
               sx={{ ml: 0.5 }}
             >
-              {compact ? 'Run' : t('run')}
+              {t('run')}
             </Button>
             <Button
               variant="contained"
@@ -1202,7 +1363,7 @@ export default function AppShell() {
               disabled={state.cloud.saving}
               sx={{ ml: 0.5 }}
             >
-              {compact ? 'Save' : t('saveProject')}
+              {t('saveProject')}
             </Button>
           </Box>
         </Toolbar>
@@ -1212,15 +1373,13 @@ export default function AppShell() {
         sx={{
           px: { xs: 1, sm: 2 },
           pt: 0.5,
-          pb: compact ? '84px' : 2,
+          pb: 2,
           height: 'calc(100dvh - 64px)',
           minHeight: 'calc(100vh - 64px)',
           display: 'grid',
-          gridTemplateColumns: compact
-            ? '1fr'
-            : medium
-              ? `${railWidth}px minmax(0, 1fr)`
-              : `${drawerCurrentWidth}px minmax(0, 1fr)`,
+          gridTemplateColumns: medium
+            ? `${railWidth}px minmax(0, 1fr)`
+            : `${drawerCurrentWidth}px minmax(0, 1fr)`,
           gap: 0.5,
         }}
       >
@@ -1233,175 +1392,62 @@ export default function AppShell() {
             minHeight: 0,
             height: '100%',
             display: 'grid',
-            gridTemplateRows: compact ? 'auto minmax(0, 1fr) auto' : 'minmax(0, 1fr)',
-            gap: compact ? 1 : '4px',
+            gridTemplateRows: 'minmax(0, 1fr)',
+            gap: '4px',
             borderRadius: 4,
-            p: compact ? 1 : '4px',
+            p: '4px',
             backgroundColor: theme.custom.surfaceContainer,
           })}
         >
-          {compact ? (
-            <Paper
-              sx={{
-                p: 0.75,
-                borderRadius: 3,
-                backgroundColor: 'transparent',
-              }}
-            >
-              <ToggleButtonGroup
-                fullWidth
-                size="small"
-                exclusive
-                value={state.workspacePrefs.mobilePane}
-                onChange={(_event, next) => {
-                  if (next) {
-                    dispatch({ type: 'SET_MOBILE_PANE', payload: next })
-                  }
-                }}
-              >
-                <ToggleButton value="editor">{t('editor')}</ToggleButton>
-                <ToggleButton value="preview">{t('preview')}</ToggleButton>
-              </ToggleButtonGroup>
-            </Paper>
-          ) : null}
-
           <Box
             sx={(theme) => ({
               minHeight: 0,
               height: '100%',
               display: 'grid',
-              gridTemplateColumns: compact
-                ? '1fr'
-                : 'minmax(0, 1fr) minmax(0, 1fr)',
-              gridTemplateRows: compact ? '1fr' : 'repeat(2, minmax(0, 1fr))',
-              gap: compact ? 1 : '4px',
-              p: compact ? 0 : '4px',
-              borderRadius: compact ? 0 : 3,
+              gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+              gridTemplateRows: 'repeat(2, minmax(0, 1fr))',
+              gap: '4px',
+              p: '4px',
+              borderRadius: 3,
               overflow: 'hidden',
-              backgroundColor: compact
-                ? 'transparent'
-                : theme.palette.background.paper,
+              backgroundColor: theme.palette.background.paper,
             })}
           >
-            {compact && state.workspacePrefs.mobilePane === 'editor' ? (
-              <EditorWorkspace
-                files={state.files}
-                activeFile={state.activeFile}
-                editorPrefs={state.editorPrefs}
-                dispatch={dispatch}
-                t={t}
-                onRegisterEditorRef={registerEditorRef}
-              />
-            ) : null}
-            {compact && state.workspacePrefs.mobilePane === 'preview' ? (
-              <PreviewPane
-                previewFiles={state.previewFiles}
-                language={state.language}
-                t={t}
-              />
-            ) : null}
-            {!compact ? (
-              <>
-                <EditorPane
-                  fileKey="html"
-                  label={<HtmlRounded />}
-                  value={state.files.html}
-                  editorPrefs={state.editorPrefs}
-                  dispatch={dispatch}
-                  t={t}
-                  onRegisterEditorRef={registerEditorRef}
-                />
-                <EditorPane
-                  fileKey="css"
-                  label={<CssRounded />}
-                  value={state.files.css}
-                  editorPrefs={state.editorPrefs}
-                  dispatch={dispatch}
-                  t={t}
-                  onRegisterEditorRef={registerEditorRef}
-                />
-                <EditorPane
-                  fileKey="js"
-                  label={<JavascriptRounded />}
-                  value={state.files.js}
-                  editorPrefs={state.editorPrefs}
-                  dispatch={dispatch}
-                  t={t}
-                  onRegisterEditorRef={registerEditorRef}
-                />
-                <PreviewPane
-                  previewFiles={state.previewFiles}
-                  language={state.language}
-                  t={t}
-                />
-              </>
-            ) : null}
+            <EditorPane
+              fileKey="html"
+              label={<HtmlRounded />}
+              value={state.files.html}
+              editorPrefs={state.editorPrefs}
+              dispatch={dispatch}
+              t={t}
+              onRegisterEditorRef={registerEditorRef}
+            />
+            <EditorPane
+              fileKey="css"
+              label={<CssRounded />}
+              value={state.files.css}
+              editorPrefs={state.editorPrefs}
+              dispatch={dispatch}
+              t={t}
+              onRegisterEditorRef={registerEditorRef}
+            />
+            <EditorPane
+              fileKey="js"
+              label={<JavascriptRounded />}
+              value={state.files.js}
+              editorPrefs={state.editorPrefs}
+              dispatch={dispatch}
+              t={t}
+              onRegisterEditorRef={registerEditorRef}
+            />
+            <PreviewPane
+              previewFiles={state.previewFiles}
+              language={state.language}
+              t={t}
+            />
           </Box>
-
-          {compact ? (
-            <Paper
-              sx={{
-                px: 1.25,
-                py: 0.75,
-                borderRadius: 3,
-                backgroundColor: 'transparent',
-              }}
-            >
-              <Typography variant="labelMedium" color="text.secondary">
-                {t('keyShortcuts')}: Cmd/Ctrl+K, Cmd/Ctrl+F, Cmd/Ctrl+Shift+H,
-                Cmd/Ctrl+S, Alt+1/2/3
-              </Typography>
-            </Paper>
-          ) : null}
         </Box>
       </Box>
-
-      {compact ? (
-        <Paper
-          square
-          sx={{
-            position: 'fixed',
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 20,
-            borderRadius: 0,
-          }}
-        >
-          <BottomNavigation
-            showLabels
-            value={activeNav}
-            onChange={(_event, value) => {
-              activateDestination(value)
-            }}
-            sx={{
-              height: 64,
-              pb: 'env(safe-area-inset-bottom)',
-            }}
-          >
-            <BottomNavigationAction
-              value="workspace"
-              label={t('workspace')}
-              icon={<TerminalRounded />}
-            />
-            <BottomNavigationAction
-              value="projects"
-              label={t('projects')}
-              icon={<FolderOpenRounded />}
-            />
-            <BottomNavigationAction
-              value="minitool"
-              label={t('minitool')}
-              icon={<BuildRounded />}
-            />
-            <BottomNavigationAction
-              value="settings"
-              label={t('settings')}
-              icon={<SettingsRounded />}
-            />
-          </BottomNavigation>
-        </Paper>
-      ) : null}
 
       <CommandPalette
         open={commandPaletteOpen}
