@@ -29,7 +29,7 @@ import {
   BuildRounded,
   DragHandleRounded,
 } from '@mui/icons-material'
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import MobileConsolePanel from './MobileConsolePanel'
 import PreviewPane from '../preview/PreviewPane'
 
@@ -52,12 +52,10 @@ const MobileShell = memo(function MobileShell({
   onFormat,
   onRun,
 }) {
+  const [viewMode, setViewMode] = useState('editor') // 'editor' | 'preview'
   const [menuAnchor, setMenuAnchor] = useState(null)
-  const splitContainerRef = useRef(null)
-  const dragRef = useRef({ active: false, startY: 0, startRatio: 0 })
   const editorRefs = useRef({ html: null, css: null, js: null })
 
-  const splitRatio = state.workspacePrefs.mobileSplitRatio ?? 0.55
   const consoleOpen = state.workspacePrefs.mobileConsoleOpen ?? false
   const activeFile = state.activeFile
   const activeLines = useMemo(
@@ -73,50 +71,18 @@ const MobileShell = memo(function MobileShell({
     [onRegisterEditorRef],
   )
 
-  // --- Drag-to-resize split ---
-  const handleDragStart = useCallback(
-    (e) => {
-      e.preventDefault()
-      if (e.currentTarget.setPointerCapture) {
-        e.currentTarget.setPointerCapture(e.pointerId)
-      }
-      dragRef.current = { active: true, startY: e.clientY, startRatio: splitRatio }
-    },
-    [splitRatio],
-  )
 
-  const handleDragMove = useCallback(
-    (e) => {
-      if (!dragRef.current.active) return
-      const container = splitContainerRef.current
-      if (!container) return
-      const containerHeight = container.offsetHeight
-      if (containerHeight === 0) return
-      const deltaY = e.clientY - dragRef.current.startY
-      const deltaRatio = deltaY / containerHeight
-      const next = dragRef.current.startRatio + deltaRatio
-      dispatch({ type: 'SET_MOBILE_SPLIT_RATIO', payload: next })
-    },
-    [dispatch],
-  )
 
-  const handleDragEnd = useCallback(() => {
-    dragRef.current.active = false
-  }, [])
-
-  useEffect(() => {
-    if (!dragRef.current.active) return
-    const onMove = (e) => handleDragMove(e)
-    const onEnd = () => handleDragEnd()
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onEnd)
-    window.addEventListener('pointercancel', onEnd)
-    return () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onEnd)
-      window.removeEventListener('pointercancel', onEnd)
+  const handleTabChange = useCallback((_e, newValue) => {
+    if (newValue === 'preview') {
+      setViewMode('preview')
+    } else {
+      setViewMode('editor')
+      dispatch({ type: 'SET_ACTIVE_FILE', payload: newValue })
     }
-  })
+  }, [dispatch])
+
+  // --- Drag-to-resize split removed ---
 
   const handleMenuOpen = useCallback((e) => setMenuAnchor(e.currentTarget), [])
   const handleMenuClose = useCallback(() => setMenuAnchor(null), [])
@@ -178,8 +144,8 @@ const MobileShell = memo(function MobileShell({
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100dvh',
-        minHeight: '100vh',
+        height: '100%',
+        width: '100%',
         overflow: 'hidden',
         bgcolor: 'background.default',
       }}
@@ -270,7 +236,10 @@ const MobileShell = memo(function MobileShell({
           color="primary"
           size="small"
           startIcon={<PlayArrowRounded />}
-          onClick={onRun}
+          onClick={() => {
+            onRun()
+            setViewMode('preview')
+          }}
           sx={{
             minWidth: 0,
             px: 1.5,
@@ -297,10 +266,8 @@ const MobileShell = memo(function MobileShell({
         })}
       >
         <Tabs
-          value={activeFile}
-          onChange={(_e, next) =>
-            dispatch({ type: 'SET_ACTIVE_FILE', payload: next })
-          }
+          value={viewMode === 'preview' ? 'preview' : activeFile}
+          onChange={handleTabChange}
           variant="scrollable"
           scrollButtons={false}
           sx={{
@@ -325,25 +292,40 @@ const MobileShell = memo(function MobileShell({
               }}
             />
           ))}
+          <Tab
+            value="preview"
+            label={t('preview') || 'Preview'}
+            disableRipple
+            sx={{
+              minHeight: 32,
+              minWidth: 56,
+              px: 1.5,
+              py: 0.5,
+              fontSize: 12,
+              fontWeight: 700,
+              textTransform: 'none',
+            }}
+          />
         </Tabs>
 
         <Box sx={{ flex: 1 }} />
 
-        <Chip
-          label={`${activeLines} ${t('lines')}`}
-          size="small"
-          variant="outlined"
-          sx={{
-            height: 22,
-            borderRadius: 999,
-            '& .MuiChip-label': { px: 1, fontSize: 10, fontWeight: 600 },
-          }}
-        />
+        {viewMode !== 'preview' && (
+          <Chip
+            label={`${activeLines} ${t('lines')}`}
+            size="small"
+            variant="outlined"
+            sx={{
+              height: 22,
+              borderRadius: 999,
+              '& .MuiChip-label': { px: 1, fontSize: 10, fontWeight: 600 },
+            }}
+          />
+        )}
       </Box>
 
-      {/* ── Split Container (Editor + Preview) ── */}
+      {/* ── Main Content Area (Editor OR Preview) ── */}
       <Box
-        ref={splitContainerRef}
         sx={{
           flex: 1,
           display: 'flex',
@@ -355,9 +337,8 @@ const MobileShell = memo(function MobileShell({
         {/* Editor Panel */}
         <Box
           sx={(theme) => ({
-            height: `${splitRatio * 100}%`,
-            minHeight: 80,
-            display: 'flex',
+            flex: 1,
+            display: viewMode === 'editor' ? 'flex' : 'none',
             flexDirection: 'column',
             overflow: 'hidden',
             backgroundColor: theme.custom.workspaceCanvas,
@@ -409,69 +390,27 @@ const MobileShell = memo(function MobileShell({
           </Box>
         </Box>
 
-        {/* ── Drag Handle ── */}
-        <Box
-          aria-label={t('dragHandle')}
-          onPointerDown={handleDragStart}
-          sx={(theme) => ({
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 24,
-            flexShrink: 0,
-            cursor: 'row-resize',
-            touchAction: 'none',
-            userSelect: 'none',
-            backgroundColor: theme.custom.surfaceContainer,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            borderBottom: `1px solid ${theme.palette.divider}`,
-          })}
-        >
-          <DragHandleRounded
-            sx={{ fontSize: 20, color: 'text.secondary', opacity: 0.6 }}
-          />
-        </Box>
-
         {/* Preview Panel */}
         <Box
           sx={(theme) => ({
             flex: 1,
-            minHeight: 60,
-            display: 'flex',
+            display: viewMode === 'preview' ? 'flex' : 'none',
             flexDirection: 'column',
             overflow: 'hidden',
             backgroundColor: theme.custom.workspaceCanvas,
           })}
         >
-          {/* Preview header */}
-          <Box
-            sx={(theme) => ({
-              display: 'flex',
-              alignItems: 'center',
-              px: 1.5,
-              py: 0.5,
-              minHeight: 28,
-              backgroundColor: theme.custom.surfaceContainer,
-            })}
-          >
-            <Typography
-              variant="labelSmall"
-              sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}
-            >
-              {t('result')}
-            </Typography>
-          </Box>
-
-          {/* Preview iframe */}
           <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
             <PreviewPane
               previewFiles={state.previewFiles}
               language={state.language}
               t={t}
+              mobile
             />
           </Box>
         </Box>
       </Box>
+
 
       {/* ── Console Panel ── */}
       <MobileConsolePanel

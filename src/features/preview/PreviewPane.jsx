@@ -44,7 +44,7 @@ ${previewFiles.html}
 </html>`
 }
 
-const PreviewPane = memo(function PreviewPane({ previewFiles, language, t }) {
+const PreviewPane = memo(function PreviewPane({ previewFiles, language, t, mobile = false }) {
   const srcDoc = useMemo(
     () => buildSrcDoc(previewFiles, language),
     [previewFiles, language],
@@ -54,8 +54,8 @@ const PreviewPane = memo(function PreviewPane({ previewFiles, language, t }) {
     <Paper
       sx={(theme) => ({
         height: '100%',
-        borderRadius: 2,
-        p: 0.75,
+        borderRadius: mobile ? 0 : 2,
+        p: mobile ? 0 : 0.75,
         display: 'flex',
         overflow: 'hidden',
         backgroundColor: theme.custom.workspaceCanvas,
@@ -65,7 +65,7 @@ const PreviewPane = memo(function PreviewPane({ previewFiles, language, t }) {
       <Box
         sx={{
           flex: 1,
-          borderRadius: 1.5,
+          borderRadius: mobile ? 0 : 1.5,
           overflow: 'hidden',
           backgroundColor: 'transparent',
         }}

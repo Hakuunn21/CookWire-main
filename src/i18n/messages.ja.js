@@ -74,7 +74,6 @@ const messages = {
   console: 'コンソール',
   consoleEmpty: '出力がありません。実行を押してください。',
   consoleClear: 'クリア',
-  result: '実行結果',
   mobileMenuTitle: 'アクション',
   format: '整形',
   search: '検索',

@@ -1121,7 +1121,7 @@ export default function AppShell() {
 
   if (compact) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Box sx={{ height: '100dvh', width: '100vw', overflow: 'hidden', bgcolor: 'background.default' }}>
         <MobileShell
           state={state}
           dispatch={dispatch}

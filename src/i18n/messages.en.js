@@ -74,7 +74,6 @@ const messages = {
   console: 'Console',
   consoleEmpty: 'No output yet. Tap Run to execute.',
   consoleClear: 'Clear',
-  result: 'Result',
   mobileMenuTitle: 'Actions',
   format: 'Format',
   search: 'Search',
