@@ -193,7 +193,7 @@ const MobileShell = memo(function MobileShell({
           gap: 0.5,
           px: 1,
           py: 0.75,
-          minHeight: 52,
+          minHeight: 48,
           zIndex: 10,
           backgroundColor: theme.palette.background.paper,
           borderBottom: `1px solid ${theme.palette.divider}`,
@@ -290,8 +290,9 @@ const MobileShell = memo(function MobileShell({
         sx={(theme) => ({
           display: 'flex',
           alignItems: 'center',
-          px: 1,
-          minHeight: 40,
+          px: 0.75,
+          py: 0.25,
+          minHeight: 38,
           backgroundColor: theme.custom.surfaceContainer,
           flexShrink: 0,
         })}
@@ -304,8 +305,8 @@ const MobileShell = memo(function MobileShell({
           variant="scrollable"
           scrollButtons={false}
           sx={{
-            minHeight: 36,
-            '& .MuiTabs-flexContainer': { gap: 0.25 },
+            minHeight: 32,
+            '& .MuiTabs-flexContainer': { gap: 0.5 },
           }}
         >
           {FILE_KEYS.map((key) => (
@@ -315,13 +316,14 @@ const MobileShell = memo(function MobileShell({
               label={TAB_LABELS[key]}
               disableRipple
               sx={{
-                minHeight: 32,
-                minWidth: 56,
+                minHeight: 30,
+                minWidth: 52,
                 px: 1.5,
-                py: 0.5,
+                py: 0.25,
                 fontSize: 12,
-                fontWeight: 700,
+                fontWeight: 600,
                 textTransform: 'none',
+                borderRadius: '10px',
               }}
             />
           ))}
@@ -335,7 +337,7 @@ const MobileShell = memo(function MobileShell({
           variant="outlined"
           sx={{
             height: 22,
-            borderRadius: 999,
+            borderRadius: 10,
             '& .MuiChip-label': { px: 1, fontSize: 10, fontWeight: 600 },
           }}
         />
@@ -417,7 +419,7 @@ const MobileShell = memo(function MobileShell({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 24,
+            height: 20,
             flexShrink: 0,
             cursor: 'row-resize',
             touchAction: 'none',
@@ -428,7 +430,7 @@ const MobileShell = memo(function MobileShell({
           })}
         >
           <DragHandleRounded
-            sx={{ fontSize: 20, color: 'text.secondary', opacity: 0.6 }}
+            sx={{ fontSize: 18, color: 'text.secondary', opacity: 0.45 }}
           />
         </Box>
 
@@ -448,9 +450,9 @@ const MobileShell = memo(function MobileShell({
             sx={(theme) => ({
               display: 'flex',
               alignItems: 'center',
-              px: 1.5,
-              py: 0.5,
-              minHeight: 28,
+              px: 1,
+              py: 0.25,
+              minHeight: 26,
               backgroundColor: theme.custom.surfaceContainer,
             })}
           >
@@ -500,7 +502,7 @@ const MobileShell = memo(function MobileShell({
           paper: {
             sx: {
               minWidth: 200,
-              borderRadius: 3,
+              borderRadius: '12px',
               mt: 0.5,
             },
           },

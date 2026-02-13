@@ -225,12 +225,18 @@ export const createAppTheme = (mode = 'dark') => {
       MuiTab: {
         styleOverrides: {
           root: {
-            minHeight: 40,
+            minHeight: 36,
             paddingInline: 14,
+            borderRadius: 10,
             color: c.onSurfaceVariant,
+            transition: 'background-color 160ms ease, color 160ms ease',
             '&.Mui-selected': {
+              backgroundColor: alpha(c.onSurface, 0.10),
               color: c.onSurface,
               fontWeight: 700,
+            },
+            '&:hover': {
+              backgroundColor: alpha(c.onSurface, 0.05),
             },
           },
         },
@@ -239,9 +245,10 @@ export const createAppTheme = (mode = 'dark') => {
         styleOverrides: {
           root: {
             border: 'none',
-            borderRadius: 999,
-            backgroundColor: c.surfaceContainerHigh,
-            padding: 2,
+            borderRadius: 10,
+            backgroundColor: alpha(c.onSurface, 0.04),
+            padding: 3,
+            gap: 2,
           },
         },
       },
@@ -249,15 +256,19 @@ export const createAppTheme = (mode = 'dark') => {
         styleOverrides: {
           root: {
             border: 'none',
-            borderRadius: 999,
+            borderRadius: '8px !important',
             color: c.onSurfaceVariant,
+            transition: 'background-color 160ms ease, color 160ms ease',
             '&.Mui-selected': {
-              backgroundColor: navIndicator,
+              backgroundColor: alpha(c.onSurface, 0.10),
               color: c.onSurface,
               fontWeight: 700,
             },
             '&.Mui-selected:hover': {
-              backgroundColor: navIndicator,
+              backgroundColor: alpha(c.onSurface, 0.14),
+            },
+            '&:hover': {
+              backgroundColor: alpha(c.onSurface, 0.05),
             },
           },
         },
@@ -265,18 +276,18 @@ export const createAppTheme = (mode = 'dark') => {
       MuiListItemButton: {
         styleOverrides: {
           root: {
-            borderRadius: 999,
+            borderRadius: 10,
             minHeight: 48,
             '&:hover': {
-              backgroundColor: alpha(c.onSurface, 0.08),
+              backgroundColor: alpha(c.onSurface, 0.06),
             },
             '&.Mui-selected': {
-              backgroundColor: navIndicator,
+              backgroundColor: alpha(c.onSurface, 0.10),
               color: c.onSurface,
               fontWeight: 700,
             },
             '&.Mui-selected:hover': {
-              backgroundColor: navIndicator,
+              backgroundColor: alpha(c.onSurface, 0.14),
             },
           },
         },
@@ -292,6 +303,7 @@ export const createAppTheme = (mode = 'dark') => {
         styleOverrides: {
           root: {
             minWidth: 72,
+            borderRadius: 10,
             '&.Mui-selected': {
               color: c.onSurface,
             },

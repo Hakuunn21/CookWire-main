@@ -80,7 +80,7 @@ const MobileConsolePanel = memo(function MobileConsolePanel({
         flexDirection: 'column',
         overflow: 'hidden',
         transition: 'height 220ms cubic-bezier(0.2, 0, 0, 1)',
-        height: open ? 160 : 36,
+        height: open ? 160 : 34,
         flexShrink: 0,
       })}
     >
@@ -91,9 +91,9 @@ const MobileConsolePanel = memo(function MobileConsolePanel({
           display: 'flex',
           alignItems: 'center',
           gap: 0.5,
-          px: 1.5,
-          py: 0.5,
-          minHeight: 36,
+          px: 1,
+          py: 0.25,
+          minHeight: 34,
           cursor: 'pointer',
           userSelect: 'none',
         }}
@@ -112,7 +112,7 @@ const MobileConsolePanel = memo(function MobileConsolePanel({
             size="small"
             color="error"
             variant="outlined"
-            sx={{ height: 22, '& .MuiChip-label': { px: 0.5, fontSize: 11 } }}
+            sx={{ height: 20, borderRadius: 10, '& .MuiChip-label': { px: 0.5, fontSize: 10 } }}
           />
         )}
         {warnCount > 0 && (
@@ -122,7 +122,7 @@ const MobileConsolePanel = memo(function MobileConsolePanel({
             size="small"
             color="warning"
             variant="outlined"
-            sx={{ height: 22, '& .MuiChip-label': { px: 0.5, fontSize: 11 } }}
+            sx={{ height: 20, borderRadius: 10, '& .MuiChip-label': { px: 0.5, fontSize: 10 } }}
           />
         )}
 
