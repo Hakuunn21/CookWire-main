@@ -70,6 +70,21 @@ const messages = {
   ariaPreview: 'ライブプレビュー',
   sidebarSnapHandle: 'サイドバー開閉ハンドル',
   createdAt: '作成日時',
+  downloadZip: 'ZIPダウンロード',
+  console: 'コンソール',
+  consoleEmpty: '出力がありません。実行を押してください。',
+  consoleClear: 'クリア',
+  result: '実行結果',
+  mobileMenuTitle: 'アクション',
+  format: '整形',
+  search: '検索',
+  share: '共有',
+  more: 'その他',
+  dragHandle: 'パネルサイズ調整ハンドル',
+  lines: '行',
+  errors: 'エラー',
+  warnings: '警告',
+  logs: 'ログ',
 }
 
 export default messages

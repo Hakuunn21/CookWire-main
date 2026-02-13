@@ -2,12 +2,36 @@ import { Box, Paper } from '@mui/material'
 import { memo, useMemo } from 'react'
 import ReactSrcDocIframe from 'react-srcdoc-iframe'
 
+const CONSOLE_CAPTURE_SCRIPT = `
+<script>
+(function(){
+  var methods = ['log','info','warn','error'];
+  methods.forEach(function(m){
+    var orig = console[m];
+    console[m] = function(){
+      var args = Array.prototype.slice.call(arguments).map(function(a){
+        try { return typeof a === 'object' ? JSON.stringify(a) : String(a); }
+        catch(e) { return String(a); }
+      });
+      try { window.parent.postMessage({type:'console',method:m,args:args},'*'); } catch(e){}
+      orig.apply(console, arguments);
+    };
+  });
+  window.onerror = function(msg, src, line, col, err){
+    try {
+      window.parent.postMessage({type:'console',method:'error',args:[msg + ' (line ' + line + ')']},'*');
+    } catch(e){}
+  };
+})();
+</script>`
+
 function buildSrcDoc(previewFiles, language) {
   return `<!doctype html>
 <html lang="${language}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+${CONSOLE_CAPTURE_SCRIPT}
 <style>
 html, body { margin: 0; background: transparent; }
 ${previewFiles.css}
