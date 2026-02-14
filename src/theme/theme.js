@@ -2,34 +2,40 @@ import { alpha, createTheme } from '@mui/material/styles'
 
 const TOKENS = {
   dark: {
-    primary: '#17222d',
-    onPrimary: '#e7edf7',
-    primaryContainer: '#17222d',
-    onPrimaryContainer: '#e7edf7',
-    background: '#17222d',
-    surface: '#17222d',
-    surfaceContainer: '#17222d',
-    surfaceContainerHigh: '#17222d',
-    workspaceCanvas: '#121d28',
-    mainDisplay: '#0f1822',
-    onSurface: '#e7edf7',
-    onSurfaceVariant: '#a7b4c8',
-    outline: '#3c4c61',
+    primary: '#a8c7ff', // M3 Dark Primary (light blue)
+    onPrimary: '#003062',
+    primaryContainer: '#00468a',
+    onPrimaryContainer: '#d6e3ff',
+    secondary: '#bec6dc',
+    onSecondary: '#283141',
+    secondaryContainer: '#3e4759',
+    onSecondaryContainer: '#dae2f9',
+    background: '#1a1c1e',
+    surface: '#1a1c1e',
+    surfaceVariant: '#44474e',
+    onSurface: '#e2e2e6',
+    onSurfaceVariant: '#c4c6d0',
+    outline: '#8e9099',
+    workspaceCanvas: '#111318',
+    mainDisplay: '#1a1c1e',
   },
   light: {
-    primary: '#1a73e8',
+    primary: '#005faf', // M3 Light Primary
     onPrimary: '#ffffff',
-    primaryContainer: '#d3e3fd',
-    onPrimaryContainer: '#001a41',
-    background: '#edf2f6',
-    surface: '#edf2f6',
-    surfaceContainer: '#edf2f6',
-    surfaceContainerHigh: '#edf2f6',
-    workspaceCanvas: '#fafaf8',
-    mainDisplay: '#dfe5eb',
-    onSurface: '#1b2430',
-    onSurfaceVariant: '#556577',
-    outline: '#738395',
+    primaryContainer: '#d6e3ff',
+    onPrimaryContainer: '#001b3e',
+    secondary: '#565e71',
+    onSecondary: '#ffffff',
+    secondaryContainer: '#dae2f9',
+    onSecondaryContainer: '#131c2b',
+    background: '#fdfcff',
+    surface: '#fdfcff',
+    surfaceVariant: '#e0e2ec',
+    onSurface: '#1a1c1e',
+    onSurfaceVariant: '#44474e',
+    outline: '#74777f',
+    workspaceCanvas: '#f1f0f4',
+    mainDisplay: '#fdfcff',
   },
 }
 
@@ -37,25 +43,34 @@ const flatShadows = Array.from({ length: 25 }, () => 'none')
 
 export const createAppTheme = (mode = 'dark') => {
   const c = mode === 'light' ? TOKENS.light : TOKENS.dark
-  const navIndicator = 'transparent'
+  const navIndicator = alpha(c.primary, 0.12)
 
   return createTheme({
     cssVariables: true,
     shape: {
-      borderRadius: 4,
+      borderRadius: 12, // M3 Medium components
     },
     shadows: flatShadows,
     typography: {
-      fontFamily: '"Google Sans", sans-serif',
-      titleLarge: { fontWeight: 700, fontSize: 22, lineHeight: 1.25 },
-      titleMedium: { fontWeight: 650, fontSize: 16, lineHeight: 1.35 },
-      bodyLarge: { fontWeight: 500, fontSize: 15, lineHeight: 1.55 },
-      labelLarge: { fontWeight: 650, fontSize: 14, lineHeight: 1.4 },
-      labelMedium: { fontWeight: 600, fontSize: 12, lineHeight: 1.35 },
-      labelSmall: { fontWeight: 600, fontSize: 11, lineHeight: 1.3 },
+      fontFamily: '"Google Sans", "Roboto", "Helvetica", "Arial", sans-serif',
+      displayLarge: { fontWeight: 400, fontSize: 57, lineHeight: 1.12, letterSpacing: -0.25 },
+      displayMedium: { fontWeight: 400, fontSize: 45, lineHeight: 1.15 },
+      displaySmall: { fontWeight: 400, fontSize: 36, lineHeight: 1.22 },
+      headlineLarge: { fontWeight: 400, fontSize: 32, lineHeight: 1.25 },
+      headlineMedium: { fontWeight: 400, fontSize: 28, lineHeight: 1.29 },
+      headlineSmall: { fontWeight: 400, fontSize: 24, lineHeight: 1.33 },
+      titleLarge: { fontWeight: 400, fontSize: 22, lineHeight: 1.25 },
+      titleMedium: { fontWeight: 500, fontSize: 16, lineHeight: 1.5, letterSpacing: 0.15 },
+      titleSmall: { fontWeight: 500, fontSize: 14, lineHeight: 1.43, letterSpacing: 0.1 },
+      bodyLarge: { fontWeight: 400, fontSize: 16, lineHeight: 1.5, letterSpacing: 0.5 },
+      bodyMedium: { fontWeight: 400, fontSize: 14, lineHeight: 1.43, letterSpacing: 0.25 },
+      bodySmall: { fontWeight: 400, fontSize: 12, lineHeight: 1.33, letterSpacing: 0.4 },
+      labelLarge: { fontWeight: 500, fontSize: 14, lineHeight: 1.43, letterSpacing: 0.1 },
+      labelMedium: { fontWeight: 500, fontSize: 12, lineHeight: 1.33, letterSpacing: 0.5 },
+      labelSmall: { fontWeight: 500, fontSize: 11, lineHeight: 1.45, letterSpacing: 0.5 },
       button: {
         textTransform: 'none',
-        fontWeight: 700,
+        fontWeight: 500,
       },
     },
     palette: {
@@ -63,6 +78,10 @@ export const createAppTheme = (mode = 'dark') => {
       primary: {
         main: c.primary,
         contrastText: c.onPrimary,
+      },
+      secondary: {
+        main: c.secondary,
+        contrastText: c.onSecondary,
       },
       background: {
         default: c.background,
@@ -72,29 +91,14 @@ export const createAppTheme = (mode = 'dark') => {
         primary: c.onSurface,
         secondary: c.onSurfaceVariant,
       },
-      divider: alpha(c.outline, 0.25),
+      divider: alpha(c.outline, 0.2),
     },
     custom: {
-      surfaceContainer: c.surfaceContainer,
-      surfaceContainerHigh: c.surfaceContainerHigh,
+      surfaceContainer: c.background,
+      surfaceContainerHigh: c.surfaceVariant,
       workspaceCanvas: c.workspaceCanvas,
       mainDisplay: c.mainDisplay,
       navIndicator,
-    },
-    transitions: {
-      duration: {
-        shortest: 100,
-        shorter: 140,
-        short: 180,
-        standard: 220,
-        complex: 320,
-      },
-      easing: {
-        easeOut: 'cubic-bezier(0.2, 0, 0, 1)',
-        easeInOut: 'cubic-bezier(0.2, 0, 0, 1)',
-        easeIn: 'cubic-bezier(0.3, 0, 0.8, 0.15)',
-        sharp: 'cubic-bezier(0.2, 0, 0, 1)',
-      },
     },
     components: {
       MuiCssBaseline: {
@@ -104,55 +108,15 @@ export const createAppTheme = (mode = 'dark') => {
             backgroundColor: c.background,
             color: c.onSurface,
           },
-          '*': {
-            boxSizing: 'border-box',
-          },
         },
       },
-      MuiPaper: {
-        defaultProps: {
-          elevation: 0,
-        },
+      MuiListSubheader: {
         styleOverrides: {
           root: {
-            backgroundImage: 'none',
-          },
-        },
-      },
-      MuiAppBar: {
-        styleOverrides: {
-          root: {
-            backgroundColor: c.surface,
-            color: c.onSurface,
-            boxShadow: 'none',
-            backdropFilter: 'none',
-          },
-        },
-      },
-      MuiDrawer: {
-        styleOverrides: {
-          paper: {
-            backgroundColor: c.surfaceContainer,
-            boxShadow: 'none',
-            border: 'none',
-          },
-        },
-      },
-      MuiDialog: {
-        styleOverrides: {
-          paper: {
-            borderRadius: 7,
-            backgroundColor: c.surface,
-          },
-        },
-      },
-      MuiButtonBase: {
-        styleOverrides: {
-          root: {
-            '&.Mui-focusVisible': {
-              outline: `2px solid ${alpha(c.primary, 0.7)}`,
-              outlineOffset: 2,
-            },
+            backgroundColor: 'transparent',
+            color: c.onSurfaceVariant,
+            fontWeight: 700,
+            lineHeight: '48px',
           },
         },
       },
@@ -162,103 +126,66 @@ export const createAppTheme = (mode = 'dark') => {
         },
         styleOverrides: {
           root: {
-            borderRadius: 999,
+            borderRadius: 999, // M3 Buttons are pill-shaped
             minHeight: 40,
-            paddingInline: 16,
+            paddingInline: 24,
+            '&:hover': {
+              backgroundColor: alpha(c.primary, 0.08),
+            },
           },
           containedPrimary: {
             backgroundColor: c.primary,
             color: c.onPrimary,
             '&:hover': {
-              backgroundColor: mode === 'light' ? '#1557b0' : alpha(c.primary, 0.9),
-            },
-          },
-          contained: {
-            backgroundColor: c.surface,
-            color: c.onSurface,
-            '&:hover': {
-              backgroundColor: alpha(c.onSurface, 0.05),
+              backgroundColor: mode === 'light' ? alpha(c.primary, 0.9) : alpha(c.primary, 0.8),
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
             },
           },
           text: {
-            '&:hover': {
-              backgroundColor: alpha(c.onSurface, 0.08),
-            },
+            paddingInline: 12,
           },
         },
       },
       MuiIconButton: {
         styleOverrides: {
           root: {
-            borderRadius: 999,
+            borderRadius: '50%',
             '&:hover': {
               backgroundColor: alpha(c.onSurface, 0.08),
             },
           },
         },
       },
-      MuiOutlinedInput: {
+      MuiDialog: {
         styleOverrides: {
-          root: {
-            borderRadius: 3,
-            backgroundColor: c.surfaceContainerHigh,
-            '& fieldset': {
-              borderColor: 'transparent',
-            },
-            '&:hover fieldset': {
-              borderColor: alpha(c.onSurface, 0.18),
-            },
-            '&.Mui-focused fieldset': {
-              borderColor: c.primary,
-              borderWidth: 1,
-            },
+          paper: {
+            borderRadius: 28, // M3 Dialogs have 28dp corner radius
+            backgroundColor: c.surface,
+            padding: 24,
           },
         },
       },
-      MuiTabs: {
+      MuiTextField: {
+        defaultProps: {
+          variant: 'outlined',
+        },
+      },
+      MuiOutlinedInput: {
         styleOverrides: {
-          indicator: {
-            display: 'none',
+          root: {
+            borderRadius: 4, // M3 Outlined fields have small corner radius
+            '&.Mui-focused fieldset': {
+              borderWidth: 2,
+            },
           },
         },
       },
       MuiTab: {
         styleOverrides: {
           root: {
-            minHeight: 40,
-            paddingInline: 14,
-            color: c.onSurfaceVariant,
-            '&.Mui-selected': {
-              color: c.onSurface,
-              fontWeight: 700,
-            },
-          },
-        },
-      },
-      MuiToggleButtonGroup: {
-        styleOverrides: {
-          root: {
-            border: 'none',
-            borderRadius: 999,
-            backgroundColor: c.surfaceContainerHigh,
-            padding: 2,
-          },
-        },
-      },
-      MuiToggleButton: {
-        styleOverrides: {
-          root: {
-            border: 'none',
-            borderRadius: 999,
-            color: c.onSurfaceVariant,
-            '&.Mui-selected': {
-              backgroundColor: navIndicator,
-              color: c.onSurface,
-              fontWeight: 700,
-            },
-            '&.Mui-selected:hover': {
-              backgroundColor: navIndicator,
-            },
+            textTransform: 'none',
+            fontWeight: 500,
+            minHeight: 48,
           },
         },
       },
@@ -266,38 +193,22 @@ export const createAppTheme = (mode = 'dark') => {
         styleOverrides: {
           root: {
             borderRadius: 999,
-            minHeight: 48,
-            '&:hover': {
-              backgroundColor: alpha(c.onSurface, 0.08),
-            },
+            marginInline: 4,
+            marginBlock: 4,
             '&.Mui-selected': {
-              backgroundColor: navIndicator,
-              color: c.onSurface,
-              fontWeight: 700,
-            },
-            '&.Mui-selected:hover': {
-              backgroundColor: navIndicator,
+              backgroundColor: c.secondaryContainer,
+              color: c.onSecondaryContainer,
+              '&:hover': {
+                backgroundColor: alpha(c.secondaryContainer, 0.8),
+              },
             },
           },
         },
       },
-      MuiBottomNavigation: {
+      MuiFab: {
         styleOverrides: {
           root: {
-            backgroundColor: c.surface,
-          },
-        },
-      },
-      MuiBottomNavigationAction: {
-        styleOverrides: {
-          root: {
-            minWidth: 72,
-            '&.Mui-selected': {
-              color: c.onSurface,
-            },
-          },
-          label: {
-            fontWeight: 600,
+            borderRadius: 16, // M3 FABs are rounded squares
           },
         },
       },

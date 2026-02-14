@@ -9,6 +9,7 @@ export const DEFAULT_STATE = {
   title: 'Untitled Project',
   files: { ...DEFAULT_FILES },
   previewFiles: { ...DEFAULT_FILES },
+  previewVersion: 0,
   activeFile: 'html',
   language: 'en',
   themeMode: 'dark',
@@ -38,6 +39,7 @@ const syncPreview = (state, filesOverride) => {
   return {
     ...state,
     previewFiles: filesOverride || state.files,
+    previewVersion: state.previewVersion + 1,
   }
 }
 
@@ -55,6 +57,7 @@ export const workspaceReducer = (state, action) => {
         title: action.payload.title || state.title,
         files: nextFiles,
         previewFiles: nextFiles,
+        previewVersion: state.previewVersion + 1,
         language: action.payload.language || state.language,
         themeMode: action.payload.theme || state.themeMode,
         editorPrefs: {
@@ -93,7 +96,11 @@ export const workspaceReducer = (state, action) => {
       return syncPreview({ ...state, files }, files)
     }
     case 'SYNC_PREVIEW_NOW':
-      return { ...state, previewFiles: { ...state.files } }
+      return {
+        ...state,
+        previewFiles: { ...state.files },
+        previewVersion: state.previewVersion + 1,
+      }
     case 'SET_THEME_MODE':
       return { ...state, themeMode: action.payload === 'light' ? 'light' : 'dark' }
     case 'SET_LANGUAGE':

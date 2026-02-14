@@ -11,10 +11,13 @@
     "server": "node server/index.js"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.28",
+    "@ai-sdk/react": "^3.0.87",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.7",
     "@mui/material": "^7.3.7",
+    "ai": "^6.0.85",
     "better-sqlite3": "^12.5.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",

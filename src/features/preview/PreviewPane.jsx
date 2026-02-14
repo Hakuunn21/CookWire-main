@@ -1,6 +1,5 @@
 import { Box, Paper } from '@mui/material'
 import { memo, useMemo } from 'react'
-import ReactSrcDocIframe from 'react-srcdoc-iframe'
 
 const CONSOLE_CAPTURE_SCRIPT = `
 <script>
@@ -26,6 +25,7 @@ const CONSOLE_CAPTURE_SCRIPT = `
 </script>`
 
 function buildSrcDoc(previewFiles, language) {
+  const safeJs = (previewFiles.js || '').replace(/<\/script>/g, '<\\/script>')
   return `<!doctype html>
 <html lang="${language}">
 <head>
@@ -34,17 +34,23 @@ function buildSrcDoc(previewFiles, language) {
 ${CONSOLE_CAPTURE_SCRIPT}
 <style>
 html, body { margin: 0; background: transparent; }
-${previewFiles.css}
+${previewFiles.css || ''}
 </style>
 </head>
 <body>
-${previewFiles.html}
-<script>${previewFiles.js}</script>
+${previewFiles.html || ''}
+<script>${safeJs}</script>
 </body>
 </html>`
 }
 
-const PreviewPane = memo(function PreviewPane({ previewFiles, language, t, mobile = false }) {
+const PreviewPane = memo(function PreviewPane({
+  previewFiles,
+  previewVersion,
+  language,
+  t,
+  mobile = false,
+}) {
   const srcDoc = useMemo(
     () => buildSrcDoc(previewFiles, language),
     [previewFiles, language],
@@ -54,7 +60,7 @@ const PreviewPane = memo(function PreviewPane({ previewFiles, language, t, mobil
     <Paper
       sx={(theme) => ({
         height: '100%',
-        borderRadius: mobile ? 0 : 2,
+        borderRadius: mobile ? 0 : 1,
         p: mobile ? 0 : 0.75,
         display: 'flex',
         overflow: 'hidden',
@@ -65,16 +71,16 @@ const PreviewPane = memo(function PreviewPane({ previewFiles, language, t, mobil
       <Box
         sx={{
           flex: 1,
-          borderRadius: mobile ? 0 : 1.5,
+          borderRadius: mobile ? 0 : 0.75,
           overflow: 'hidden',
           backgroundColor: 'transparent',
         }}
       >
-        <ReactSrcDocIframe
-          key={JSON.stringify(previewFiles)}
+        <iframe
+          key={`${previewVersion}-${JSON.stringify(previewFiles)}`}
           title={t('ariaPreview')}
           srcDoc={srcDoc}
-          sandbox="allow-scripts"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
           style={{
             width: '100%',
             height: '100%',

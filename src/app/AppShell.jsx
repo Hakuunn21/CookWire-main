@@ -10,17 +10,19 @@ import {
   SettingsRounded,
   TerminalRounded,
   LoginRounded,
+  LogoutRounded,
   HtmlRounded,
   CssRounded,
   JavascriptRounded,
   FileDownloadRounded,
-  GavelRounded,
-  PrivacyTipRounded,
-  BusinessRounded,
+  AutoAwesomeRounded,
+  Google,
+
 } from '@mui/icons-material'
 import {
   Alert,
   AppBar,
+  Avatar,
   BottomNavigation,
   BottomNavigationAction,
   Box,
@@ -42,7 +44,6 @@ import {
   Toolbar,
   Tooltip,
   Typography,
-  useMediaQuery,
 } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CommandPalette from '../features/editor/CommandPalette'
@@ -50,18 +51,21 @@ import EditorPane from '../features/editor/EditorPane'
 import EditorWorkspace from '../features/editor/EditorWorkspace'
 import SearchReplacePanel from '../features/editor/SearchReplacePanel'
 import PreviewPane from '../features/preview/PreviewPane'
+import AIEditorView from '../features/ai/AIEditorView'
 import ProjectBrowser from '../features/project/ProjectBrowser'
 import SettingsView from '../features/settings/SettingsView'
 import MinitoolView from '../features/minitool/MinitoolView'
+import InfoView from '../features/info/InfoView'
 import MobileShell from '../features/mobile/MobileShell'
 import { tFor } from '../i18n'
 import { useWorkspaceDispatch, useWorkspaceState } from '../state/WorkspaceContext'
 import { formatSource } from '../utils/formatCode'
 import { getOwnerKey } from '../utils/ownerKey'
-import { createProject, getProject, listProjects, updateProject } from '../utils/projectApi'
-import JSZip from 'jszip'
+import { useSearchReplace } from '../features/editor/useSearchReplace'
+import { useFileOperations } from '../features/project/useFileOperations'
+import { useProjectManagement } from '../features/project/useProjectManagement'
+import { useAppDrawer } from './useAppDrawer'
 
-const LOCAL_STATE_KEY = 'cookwire-workspace-v3'
 
 const commentMarkers = {
   html: { prefix: '<!-- ', suffix: ' -->' },
@@ -69,148 +73,58 @@ const commentMarkers = {
   js: { prefix: '// ', suffix: '' },
 }
 
-function escapeRegExp(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
 
-function computeMatches(content, query, caseSensitive) {
-  if (!query) return []
-  const flags = caseSensitive ? 'g' : 'gi'
-  const regex = new RegExp(escapeRegExp(query), flags)
-  const matches = []
-  let match = regex.exec(content)
-  while (match) {
-    matches.push({ index: match.index, length: match[0].length })
-    match = regex.exec(content)
-  }
-  return matches
-}
-
-function replaceAt(content, start, end, value) {
-  return `${content.slice(0, start)}${value}${content.slice(end)}`
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value))
-}
 
 export default function AppShell() {
   const state = useWorkspaceState()
   const dispatch = useWorkspaceDispatch()
 
-  const compact = useMediaQuery('(max-width:599.95px)')
-  const medium = useMediaQuery('(min-width:600px) and (max-width:839.95px)')
-  const railWidth = 84
-  const drawerWidth = 224
-  const collapsedDrawerWidth = 64
-  const drawerSnapPoint =
-    collapsedDrawerWidth + (drawerWidth - collapsedDrawerWidth) * 0.45
-
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [projectsOpen, setProjectsOpen] = useState(false)
   const [minitoolOpen, setMinitoolOpen] = useState(false)
-  const [saveLocationOpen, setSaveLocationOpen] = useState(false)
-  const [projects, setProjects] = useState([])
-  const [projectsLoading, setProjectsLoading] = useState(false)
-  const [projectsError, setProjectsError] = useState('')
+  const [infoOpen, setInfoOpen] = useState(false)
+  const [infoType, setInfoType] = useState('company')
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
   const [snackbar, setSnackbar] = useState({ type: 'success', message: '' })
-  const [searchState, setSearchState] = useState({
-    query: '',
-    replaceValue: '',
-    caseSensitive: false,
-    cursor: -1,
-  })
   const [activeNav, setActiveNav] = useState('workspace')
-  const [desktopDrawerCollapsed, setDesktopDrawerCollapsed] = useState(false)
-  const [desktopDrawerWidth, setDesktopDrawerWidth] = useState(null)
-  const [desktopDrawerDragging, setDesktopDrawerDragging] = useState(false)
 
   const t = useMemo(() => tFor(state.language), [state.language])
   const editorRefs = useRef({ html: null, css: null, js: null })
-  const localStorageTimerRef = useRef(null)
-  const drawerDragRef = useRef({
-    startX: 0,
-    startWidth: drawerWidth,
-    liveWidth: drawerWidth,
-  })
-  const ownerKey = useMemo(() => getOwnerKey(), [])
-  const registerEditorRef = useCallback((fileKey, node) => {
-    editorRefs.current[fileKey] = node
+  const ownerKey = getOwnerKey()
+
+  const registerEditorRef = useCallback((fileType, ref) => {
+    editorRefs.current[fileType] = ref
   }, [])
-  const desktopDrawerActive = !compact && !medium
-  const drawerCurrentWidth = desktopDrawerActive
-    ? desktopDrawerWidth ?? (desktopDrawerCollapsed ? collapsedDrawerWidth : drawerWidth)
-    : drawerWidth
-  const drawerTextReveal = desktopDrawerActive
-    ? clamp(
-      (drawerCurrentWidth - (collapsedDrawerWidth + 8)) /
-      (drawerWidth - (collapsedDrawerWidth + 8)),
-      0,
-      1,
-    )
-    : 1
-  const drawerIconOnly = drawerTextReveal < 0.2
+
+  const handleGoogleLogin = useCallback(() => {
+    setTimeout(() => {
+      setCurrentUser({ name: 'Demo User', email: 'demo@example.com' })
+      setLoginOpen(false)
+      setSnackbar({ type: 'success', message: 'Successfully logged in with Google' })
+    }, 1000)
+  }, [])
+
+  const handleOpenInfo = useCallback((type) => {
+    setInfoType(type)
+    setInfoOpen(true)
+  }, [])
+
+  const {
+    compact,
+    medium,
+    railWidth,
+    desktopDrawerDragging,
+    desktopDrawerActive,
+    drawerCurrentWidth,
+    drawerTextReveal,
+    drawerIconOnly,
+    handleDrawerDragStart,
+    handleDrawerDragMove,
+    handleDrawerDragEnd,
+  } = useAppDrawer()
 
   const currentContent = state.files[state.activeFile]
-  const searchMatches = useMemo(
-    () => computeMatches(currentContent, searchState.query, searchState.caseSensitive),
-    [currentContent, searchState.caseSensitive, searchState.query],
-  )
-
-  useEffect(() => {
-    const raw = localStorage.getItem(LOCAL_STATE_KEY)
-    if (!raw) return
-    try {
-      const parsed = JSON.parse(raw)
-      dispatch({
-        type: 'SET_PROJECT',
-        payload: {
-          id: parsed.projectId,
-          title: parsed.title,
-          files: parsed.files,
-          language: parsed.language,
-          theme: parsed.themeMode,
-          editorPrefs: parsed.editorPrefs,
-          workspacePrefs: parsed.workspacePrefs,
-          updatedAt: parsed.updatedAt,
-        },
-      })
-    } catch {
-      // ignore invalid local state
-    }
-  }, [dispatch])
-
-  useEffect(() => {
-    if (localStorageTimerRef.current) {
-      clearTimeout(localStorageTimerRef.current)
-    }
-    localStorageTimerRef.current = setTimeout(() => {
-      localStorage.setItem(
-        LOCAL_STATE_KEY,
-        JSON.stringify({
-          projectId: state.projectId,
-          title: state.title,
-          files: state.files,
-          language: state.language,
-          themeMode: state.themeMode,
-          editorPrefs: state.editorPrefs,
-          workspacePrefs: state.workspacePrefs,
-          updatedAt: state.cloud.updatedAt,
-        }),
-      )
-    }, 300)
-    return () => {
-      if (localStorageTimerRef.current) {
-        clearTimeout(localStorageTimerRef.current)
-      }
-    }
-  }, [state])
-
-  useEffect(() => {
-    document.documentElement.lang = state.language
-  }, [state.language])
 
   const replaceCurrentFile = useCallback(
     (value) => {
@@ -225,63 +139,12 @@ export default function AppShell() {
     [dispatch, state.activeFile],
   )
 
-  const selectMatch = useCallback(
-    (index, length) => {
-      const target = editorRefs.current[state.activeFile]
-      if (!target) return
-      target.focus()
-      target.setSelectionRange(index, index + length)
-    },
-    [state.activeFile],
+  const searchReplace = useSearchReplace(
+    currentContent,
+    state.activeFile,
+    replaceCurrentFile,
+    editorRefs,
   )
-
-  const handleFindNext = useCallback(() => {
-    if (!searchState.query || searchMatches.length === 0) return
-    const next =
-      searchMatches.find((match) => match.index > searchState.cursor) ||
-      searchMatches[0]
-    setSearchState((prev) => ({ ...prev, cursor: next.index }))
-    selectMatch(next.index, next.length)
-  }, [searchMatches, searchState.cursor, searchState.query, selectMatch])
-
-  const handleReplaceNext = useCallback(() => {
-    if (!searchState.query || searchMatches.length === 0) return
-    const next =
-      searchMatches.find((match) => match.index > searchState.cursor) ||
-      searchMatches[0]
-    const replaced = replaceAt(
-      currentContent,
-      next.index,
-      next.index + next.length,
-      searchState.replaceValue,
-    )
-    replaceCurrentFile(replaced)
-    const newCursor = next.index + searchState.replaceValue.length - 1
-    setSearchState((prev) => ({ ...prev, cursor: newCursor }))
-    selectMatch(next.index, searchState.replaceValue.length)
-  }, [
-    currentContent,
-    replaceCurrentFile,
-    searchMatches,
-    searchState.cursor,
-    searchState.query,
-    searchState.replaceValue,
-    selectMatch,
-  ])
-
-  const handleReplaceAll = useCallback(() => {
-    if (!searchState.query) return
-    const flags = searchState.caseSensitive ? 'g' : 'gi'
-    const regex = new RegExp(escapeRegExp(searchState.query), flags)
-    replaceCurrentFile(currentContent.replace(regex, searchState.replaceValue))
-    setSearchState((prev) => ({ ...prev, cursor: -1 }))
-  }, [
-    currentContent,
-    replaceCurrentFile,
-    searchState.caseSensitive,
-    searchState.query,
-    searchState.replaceValue,
-  ])
 
   const handleFormat = useCallback(
     async (target) => {
@@ -307,141 +170,29 @@ export default function AppShell() {
     [dispatch, state.files, t],
   )
 
-  const loadProjectList = useCallback(async () => {
-    setProjectsLoading(true)
-    setProjectsError('')
-    try {
-      const result = await listProjects(ownerKey)
-      setProjects(result)
-    } catch (error) {
-      setProjectsError(error.message || t('loadError'))
-    } finally {
-      setProjectsLoading(false)
-    }
-  }, [ownerKey, t])
+  const {
+    projectsOpen,
+    setProjectsOpen,
+    projects,
+    projectsLoading,
+    projectsError,
+    loadProjectList,
+    handleSaveProject,
+    handleOpenProjects,
+    handleLoadProject,
+    handleOpenLocalFolder,
+  } = useProjectManagement(state, dispatch, ownerKey, t, setSnackbar, setActiveNav)
 
-  const handleSaveToLocal = useCallback(() => {
-    try {
-      const payload = {
-        title: state.title || t('untitledProject'),
-        files: state.files,
-        language: state.language,
-        theme: state.themeMode,
-        editorPrefs: state.editorPrefs,
-        workspacePrefs: {
-          previewMode: state.workspacePrefs.previewMode,
-        },
-        savedAt: new Date().toISOString(),
-      }
-      localStorage.setItem('cookwire_project', JSON.stringify(payload))
-      setSnackbar({ type: 'success', message: 'ローカルに保存しました' })
-      setSaveLocationOpen(false)
-    } catch {
-      setSnackbar({ type: 'error', message: 'ローカル保存に失敗しました' })
-    }
-  }, [
-    state.title,
-    state.files,
-    state.language,
-    state.themeMode,
-    state.editorPrefs,
-    state.workspacePrefs.previewMode,
-    t,
-  ])
+  const {
+    saveLocationOpen,
+    setSaveLocationOpen,
+    handleSaveToLocal,
+    handleDownloadZip,
+  } = useFileOperations(state, t, setSnackbar)
 
-  const handleDownloadZip = useCallback(async () => {
-    try {
-      const zip = new JSZip()
-      zip.file('index.html', state.files.html)
-      zip.file('style.css', state.files.css)
-      zip.file('script.js', state.files.js)
-
-      const blob = await zip.generateAsync({ type: 'blob' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${state.title || 'project'}.zip`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      setSnackbar({ type: 'success', message: t('downloadSuccess') || 'ZIP Downloaded' })
-      setSaveLocationOpen(false)
-    } catch (error) {
-      console.error('ZIP generation failed:', error)
-      setSnackbar({ type: 'error', message: t('downloadError') || 'ZIP Generation Failed' })
-    }
-  }, [state.files, state.title, t])
-
-  const handleSaveProject = useCallback(async () => {
-    dispatch({
-      type: 'SET_CLOUD_STATE',
-      payload: { saving: true, error: '', message: '' },
-    })
-    try {
-      const payload = {
-        title: state.title || t('untitledProject'),
-        files: state.files,
-        language: state.language,
-        theme: state.themeMode,
-        editorPrefs: state.editorPrefs,
-        workspacePrefs: {
-          previewMode: state.workspacePrefs.previewMode,
-        },
-      }
-      const data = state.projectId
-        ? await updateProject(ownerKey, state.projectId, payload)
-        : await createProject(ownerKey, payload)
-      dispatch({ type: 'SET_PROJECT', payload: data })
-      dispatch({
-        type: 'SET_CLOUD_STATE',
-        payload: {
-          saving: false,
-          message: t('saveSuccess'),
-          updatedAt: data.updatedAt,
-        },
-      })
-      setSnackbar({ type: 'success', message: t('saveSuccess') })
-      setSaveLocationOpen(false)
-    } catch (error) {
-      dispatch({
-        type: 'SET_CLOUD_STATE',
-        payload: { saving: false, error: error.message || t('saveError') },
-      })
-      setSnackbar({ type: 'error', message: error.message || t('saveError') })
-    }
-  }, [
-    dispatch,
-    ownerKey,
-    state.editorPrefs,
-    state.files,
-    state.language,
-    state.projectId,
-    state.themeMode,
-    state.title,
-    state.workspacePrefs.previewMode,
-    t,
-  ])
-
-  const handleOpenProjects = useCallback(async () => {
-    setActiveNav('projects')
-    setProjectsOpen(true)
-    await loadProjectList()
-  }, [loadProjectList])
-
-  const handleLoadProject = useCallback(
-    async (projectId) => {
-      try {
-        const data = await getProject(ownerKey, projectId)
-        dispatch({ type: 'SET_PROJECT', payload: data })
-        setProjectsOpen(false)
-      } catch (error) {
-        setProjectsError(error.message || t('loadError'))
-      }
-    },
-    [dispatch, ownerKey, t],
-  )
+  const isFilesEmpty = useMemo(() => {
+    return Object.values(state.files).every((content) => !content.trim())
+  }, [state.files])
 
   const toggleTheme = useCallback(() => {
     dispatch({
@@ -457,48 +208,6 @@ export default function AppShell() {
         state.workspacePrefs.previewMode === 'desktop' ? 'mobile' : 'desktop',
     })
   }, [dispatch, state.workspacePrefs.previewMode])
-
-  const handleDrawerDragStart = useCallback(
-    (event) => {
-      if (!desktopDrawerActive) return
-      event.preventDefault()
-      if (event.currentTarget.setPointerCapture) {
-        event.currentTarget.setPointerCapture(event.pointerId)
-      }
-      const startWidth = desktopDrawerCollapsed ? collapsedDrawerWidth : drawerWidth
-      drawerDragRef.current = {
-        startX: event.clientX,
-        startWidth,
-        liveWidth: startWidth,
-      }
-      setDesktopDrawerWidth(startWidth)
-      setDesktopDrawerDragging(true)
-    },
-    [desktopDrawerActive, desktopDrawerCollapsed, collapsedDrawerWidth, drawerWidth],
-  )
-
-  const handleDrawerDragMove = useCallback(
-    (event) => {
-      if (!desktopDrawerDragging) return
-      const delta = event.clientX - drawerDragRef.current.startX
-      const nextWidth = clamp(
-        drawerDragRef.current.startWidth + delta,
-        collapsedDrawerWidth,
-        drawerWidth,
-      )
-      drawerDragRef.current.liveWidth = nextWidth
-      setDesktopDrawerWidth(nextWidth)
-    },
-    [desktopDrawerDragging, collapsedDrawerWidth, drawerWidth],
-  )
-
-  const handleDrawerDragEnd = useCallback(() => {
-    if (!desktopDrawerDragging) return
-    const snappedOpen = drawerDragRef.current.liveWidth >= drawerSnapPoint
-    setDesktopDrawerCollapsed(!snappedOpen)
-    setDesktopDrawerWidth(null)
-    setDesktopDrawerDragging(false)
-  }, [desktopDrawerDragging, drawerSnapPoint])
 
   const toggleCommentSelection = useCallback(() => {
     const target = editorRefs.current[state.activeFile]
@@ -535,7 +244,7 @@ export default function AppShell() {
       return next
     })
 
-    const replaced = replaceAt(value, start, end, nextLines.join('\n'))
+    const replaced = value.slice(0, start) + nextLines.join('\n') + value.slice(end)
     replaceCurrentFile(replaced)
   }, [replaceCurrentFile, state.activeFile, state.files])
 
@@ -557,13 +266,13 @@ export default function AppShell() {
 
       if (mod && event.key.toLowerCase() === 'f') {
         event.preventDefault()
-        setSearchOpen(true)
+        searchReplace.openSearch()
         return
       }
 
       if (mod && event.shiftKey && event.key.toLowerCase() === 'h') {
         event.preventDefault()
-        setSearchOpen(true)
+        searchReplace.openSearch()
         return
       }
 
@@ -581,7 +290,7 @@ export default function AppShell() {
 
       if (event.key === 'Escape') {
         setCommandPaletteOpen(false)
-        setSearchOpen(false)
+        searchReplace.closeSearch()
         setProjectsOpen(false)
         setSettingsOpen(false)
         setActiveNav((prev) => (prev === 'settings' ? 'workspace' : prev))
@@ -590,7 +299,7 @@ export default function AppShell() {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [dispatch, handleSaveProject, toggleCommentSelection])
+  }, [dispatch, handleSaveProject, toggleCommentSelection, searchReplace, setProjectsOpen])
 
   useEffect(() => {
     if (!desktopDrawerDragging) return
@@ -604,11 +313,6 @@ export default function AppShell() {
     }
   }, [desktopDrawerDragging, handleDrawerDragEnd, handleDrawerDragMove])
 
-  useEffect(() => {
-    if (desktopDrawerActive) return
-    setDesktopDrawerWidth(null)
-    setDesktopDrawerDragging(false)
-  }, [desktopDrawerActive])
 
   const commands = useMemo(
     () => [
@@ -673,13 +377,14 @@ export default function AppShell() {
         label: t('searchReplace'),
         shortcut: 'Cmd/Ctrl+F',
         icon: 'search',
-        run: () => setSearchOpen(true),
+        run: searchReplace.openSearch,
       },
     ],
     [
       handleFormat,
       handleOpenProjects,
       handleSaveProject,
+      searchReplace.openSearch,
       state.activeFile,
       state.themeMode,
       t,
@@ -692,6 +397,7 @@ export default function AppShell() {
     () => [
       { key: 'workspace', label: t('workspace'), icon: <TerminalRounded /> },
       { key: 'projects', label: t('projects'), icon: <FolderOpenRounded /> },
+      { key: 'withAI', label: t('withAI'), icon: <AutoAwesomeRounded /> },
       { key: 'minitool', label: t('minitool'), icon: <BuildRounded /> },
       { key: 'settings', label: t('settings'), icon: <SettingsRounded /> },
     ],
@@ -725,10 +431,23 @@ export default function AppShell() {
     [handleOpenProjects],
   )
 
+  const handleAIApply = useCallback(
+    (payload) => {
+      dispatch({ type: 'SET_FILES', payload })
+      setSnackbar({ type: 'success', message: t('aiSuccess') })
+      setActiveNav('workspace')
+      // プレビューを即座に更新
+      setTimeout(() => {
+        dispatch({ type: 'SYNC_PREVIEW_NOW' })
+      }, 100)
+    },
+    [dispatch, t],
+  )
+
   const runSidebarAction = useCallback(
     (key) => {
       if (key === 'search') {
-        setSearchOpen(true)
+        searchReplace.openSearch()
         return
       }
       if (key === 'commands') {
@@ -743,7 +462,7 @@ export default function AppShell() {
         toggleTheme()
       }
     },
-    [handleSaveProject, toggleTheme],
+    [handleSaveProject, toggleTheme, searchReplace],
   )
 
   const railNavigation = medium ? (
@@ -830,6 +549,44 @@ export default function AppShell() {
             </Typography>
           </ListItemButton>
         ))}
+        <ListItemButton
+          key="login"
+          onClick={() => {
+            if (currentUser) {
+              setCurrentUser(null)
+              setSnackbar({ type: 'success', message: 'Logged out' })
+            } else {
+              setLoginOpen(true)
+            }
+          }}
+          aria-label={currentUser ? 'Log out' : (t('login') || 'Log in')}
+          sx={{
+            minHeight: 64,
+            px: 0.5,
+            py: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexDirection: 'column',
+            gap: 0.5,
+          }}
+        >
+          <Box
+            sx={{
+              width: 56,
+              height: 32,
+              borderRadius: '16px',
+              display: 'grid',
+              placeItems: 'center',
+              backgroundColor: 'transparent',
+              color: 'text.secondary',
+            }}
+          >
+            {currentUser ? <LogoutRounded /> : <LoginRounded />}
+          </Box>
+          <Typography variant="labelSmall" sx={{ color: 'text.secondary' }}>
+            {currentUser ? 'Log out' : (t('login') || 'Log in')}
+          </Typography>
+        </ListItemButton>
       </List>
     </Paper>
   ) : null
@@ -891,14 +648,14 @@ export default function AppShell() {
               aria-label={item.label}
               sx={{
                 minHeight: 52,
-                px: drawerIconOnly ? 0 : 1.75,
+                px: drawerIconOnly ? 0 : 1.25,
                 justifyContent: drawerIconOnly ? 'center' : 'flex-start',
               }}
             >
               <ListItemIcon
                 sx={{
-                  minWidth: drawerIconOnly ? 0 : 36,
-                  mr: drawerIconOnly ? 0 : 0.5,
+                  minWidth: drawerIconOnly ? 0 : 32,
+                  mr: drawerIconOnly ? 0 : 0.25,
                   color: 'inherit',
                   display: 'grid',
                   placeItems: 'center',
@@ -934,14 +691,14 @@ export default function AppShell() {
               aria-label={item.label}
               sx={{
                 minHeight: 50,
-                px: drawerIconOnly ? 0 : 1.75,
+                px: drawerIconOnly ? 0 : 1.25,
                 justifyContent: drawerIconOnly ? 'center' : 'flex-start',
               }}
             >
               <ListItemIcon
                 sx={{
-                  minWidth: drawerIconOnly ? 0 : 36,
-                  mr: drawerIconOnly ? 0 : 0.5,
+                  minWidth: drawerIconOnly ? 0 : 32,
+                  mr: drawerIconOnly ? 0 : 0.25,
                   color: 'inherit',
                   display: 'grid',
                   placeItems: 'center',
@@ -972,109 +729,36 @@ export default function AppShell() {
           ))}
         </List>
         <ListItemButton
-          key="terms"
-          onClick={() => { console.log('Terms clicked') }}
-          aria-label={t('terms') || 'Terms'}
-          sx={{
-            minHeight: 50,
-            px: drawerIconOnly ? 0 : 1.75,
-            justifyContent: drawerIconOnly ? 'center' : 'flex-start',
-            mt: 'auto',
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: drawerIconOnly ? 0 : 36,
-              mr: drawerIconOnly ? 0 : 0.5,
-              color: 'inherit',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <GavelRounded />
-          </ListItemIcon>
-          {drawerIconOnly ? null : (
-            <ListItemText primary={t('terms') || 'Terms'} sx={{ opacity: drawerTextReveal }} />
-          )}
-        </ListItemButton>
-        <ListItemButton
-          key="privacy"
-          onClick={() => { console.log('Privacy clicked') }}
-          aria-label={t('privacy') || 'Privacy'}
-          sx={{
-            minHeight: 50,
-            px: drawerIconOnly ? 0 : 1.75,
-            justifyContent: drawerIconOnly ? 'center' : 'flex-start',
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: drawerIconOnly ? 0 : 36,
-              mr: drawerIconOnly ? 0 : 0.5,
-              color: 'inherit',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <PrivacyTipRounded />
-          </ListItemIcon>
-          {drawerIconOnly ? null : (
-            <ListItemText primary={t('privacy') || 'Privacy'} sx={{ opacity: drawerTextReveal }} />
-          )}
-        </ListItemButton>
-        <ListItemButton
-          key="company"
-          onClick={() => { console.log('Company clicked') }}
-          aria-label={t('company') || 'Company'}
-          sx={{
-            minHeight: 50,
-            px: drawerIconOnly ? 0 : 1.75,
-            justifyContent: drawerIconOnly ? 'center' : 'flex-start',
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: drawerIconOnly ? 0 : 36,
-              mr: drawerIconOnly ? 0 : 0.5,
-              color: 'inherit',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <BusinessRounded />
-          </ListItemIcon>
-          {drawerIconOnly ? null : (
-            <ListItemText primary={t('company') || 'Company'} sx={{ opacity: drawerTextReveal }} />
-          )}
-        </ListItemButton>
-
-        <ListItemButton
           key="login"
           onClick={() => {
-            // TODO: Implement login logic
-            console.log('Login clicked')
+            if (currentUser) {
+              setCurrentUser(null)
+              setSnackbar({ type: 'success', message: 'Logged out' })
+            } else {
+              setLoginOpen(true)
+            }
           }}
-          aria-label={t('login') || 'Log in'}
+          aria-label={currentUser ? 'Log out' : (t('login') || 'Log in')}
           sx={{
             minHeight: 50,
-            px: drawerIconOnly ? 0 : 1.75,
+            px: drawerIconOnly ? 0 : 1.25,
             justifyContent: drawerIconOnly ? 'center' : 'flex-start',
           }}
         >
           <ListItemIcon
             sx={{
-              minWidth: drawerIconOnly ? 0 : 36,
-              mr: drawerIconOnly ? 0 : 0.5,
+              minWidth: drawerIconOnly ? 0 : 32,
+              mr: drawerIconOnly ? 0 : 0.25,
               color: 'inherit',
               display: 'grid',
               placeItems: 'center',
             }}
           >
-            <LoginRounded />
+            {currentUser ? <LogoutRounded /> : <LoginRounded />}
           </ListItemIcon>
           {drawerIconOnly ? null : (
             <ListItemText
-              primary={t('login') || 'Log in'}
+              primary={currentUser ? 'Log out' : (t('login') || 'Log in')}
               sx={(theme) => ({
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
@@ -1093,11 +777,6 @@ export default function AppShell() {
           )}
         </ListItemButton>
 
-        {!drawerIconOnly && (
-          <Typography variant="caption" sx={{ px: 2, pb: 1, color: 'text.secondary', opacity: drawerTextReveal }}>
-            © 2024 CookWire
-          </Typography>
-        )}
       </Drawer>
 
       <Box
@@ -1126,8 +805,14 @@ export default function AppShell() {
           state={state}
           dispatch={dispatch}
           t={t}
+          currentUser={currentUser}
+          onLogin={() => setLoginOpen(true)}
+          onLogout={() => {
+            setCurrentUser(null)
+            setSnackbar({ type: 'success', message: 'Logged out' })
+          }}
           onRegisterEditorRef={registerEditorRef}
-          onOpenSearch={() => setSearchOpen(true)}
+          onOpenSearch={searchReplace.openSearch}
           onOpenCommands={() => setCommandPaletteOpen(true)}
           onOpenProjects={() => {
             setActiveNav('projects')
@@ -1141,10 +826,12 @@ export default function AppShell() {
             setActiveNav('minitool')
             setMinitoolOpen(true)
           }}
+          onOpenInfo={handleOpenInfo}
           onSave={() => void handleSaveProject()}
           onSaveLocationOpen={() => setSaveLocationOpen(true)}
           onToggleTheme={toggleTheme}
           onFormat={handleFormat}
+          onAIApply={handleAIApply}
           onRun={() => {
             dispatch({ type: 'SYNC_PREVIEW_NOW' })
             setSnackbar({ type: 'success', message: t('previewUpdated') || 'Preview updated' })
@@ -1159,28 +846,18 @@ export default function AppShell() {
         />
 
         <SearchReplacePanel
-          open={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          query={searchState.query}
-          replaceValue={searchState.replaceValue}
-          caseSensitive={searchState.caseSensitive}
-          matches={searchMatches.length}
-          onChangeQuery={(value) =>
-            setSearchState((prev) => ({ ...prev, query: value, cursor: -1 }))
-          }
-          onChangeReplace={(value) =>
-            setSearchState((prev) => ({ ...prev, replaceValue: value }))
-          }
-          onToggleCase={(checked) =>
-            setSearchState((prev) => ({
-              ...prev,
-              caseSensitive: checked,
-              cursor: -1,
-            }))
-          }
-          onFindNext={handleFindNext}
-          onReplaceNext={handleReplaceNext}
-          onReplaceAll={handleReplaceAll}
+          open={searchReplace.open}
+          onClose={searchReplace.closeSearch}
+          query={searchReplace.query}
+          replaceValue={searchReplace.replaceValue}
+          caseSensitive={searchReplace.caseSensitive}
+          matches={searchReplace.matches.length}
+          onChangeQuery={searchReplace.setQuery}
+          onChangeReplace={searchReplace.setReplaceValue}
+          onToggleCase={searchReplace.setCaseSensitive}
+          onFindNext={searchReplace.handleFindNext}
+          onReplaceNext={searchReplace.handleReplaceNext}
+          onReplaceAll={searchReplace.handleReplaceAll}
           t={t}
         />
 
@@ -1192,6 +869,7 @@ export default function AppShell() {
           error={projectsError}
           onReload={() => void loadProjectList()}
           onLoadProject={(id) => void handleLoadProject(id)}
+          onOpenLocalFolder={handleOpenLocalFolder}
           t={t}
         />
 
@@ -1230,10 +908,9 @@ export default function AppShell() {
                 color="primary"
                 fullWidth
                 startIcon={<SaveRounded />}
-                onClick={() => void handleSaveProject()}
-                disabled={state.cloud.saving}
+                disabled={true}
               >
-                {t('saveToServer')}
+                {t('saveToServer')} (Coming Soon)
               </Button>
               <Button
                 variant="contained"
@@ -1258,6 +935,50 @@ export default function AppShell() {
           <DialogActions sx={{ px: 3, pb: 2 }}>
             <Button onClick={() => setSaveLocationOpen(false)} variant="text">
               {t('close')}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={loginOpen}
+          onClose={() => setLoginOpen(false)}
+          maxWidth="xs"
+          fullWidth
+          PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
+        >
+          <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>
+            {t('login') || 'Log in'}
+          </DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1, alignItems: 'center' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Sign in to sync your projects across devices.
+              </Typography>
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Google />}
+                onClick={handleGoogleLogin}
+                sx={{
+                  color: 'text.primary',
+                  borderColor: 'divider',
+                  textTransform: 'none',
+                  justifyContent: 'center',
+                  py: 1.5,
+                  borderRadius: 2,
+                  '&:hover': {
+                    borderColor: 'text.primary',
+                    backgroundColor: 'action.hover',
+                  },
+                }}
+              >
+                Sign in with Google
+              </Button>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
+            <Button onClick={() => setLoginOpen(false)} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+              Maybe later
             </Button>
           </DialogActions>
         </Dialog>
@@ -1291,7 +1012,7 @@ export default function AppShell() {
             alignItems: 'center',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 1.75 }}>
             <Typography
               sx={{
                 letterSpacing: 0,
@@ -1306,7 +1027,7 @@ export default function AppShell() {
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Tooltip title={t('searchReplace')}>
-              <IconButton onClick={() => setSearchOpen(true)}>
+              <IconButton onClick={searchReplace.openSearch}>
                 <SearchRounded />
               </IconButton>
             </Tooltip>
@@ -1323,16 +1044,6 @@ export default function AppShell() {
                 }}
               >
                 <FolderOpenRounded />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={t('settings')}>
-              <IconButton
-                onClick={() => {
-                  setActiveNav('settings')
-                  setSettingsOpen(true)
-                }}
-              >
-                <SettingsRounded />
               </IconButton>
             </Tooltip>
             <Tooltip title={t('toggleTheme')}>
@@ -1358,12 +1069,18 @@ export default function AppShell() {
             <Button
               variant="contained"
               color="primary"
-              startIcon={<SaveRounded />}
-              onClick={() => setSaveLocationOpen(true)}
-              disabled={state.cloud.saving}
+              startIcon={isFilesEmpty ? <FolderOpenRounded /> : <SaveRounded />}
+              onClick={() => {
+                if (isFilesEmpty) {
+                  void handleOpenProjects()
+                } else {
+                  setSaveLocationOpen(true)
+                }
+              }}
+              disabled={!isFilesEmpty && state.cloud.saving}
               sx={{ ml: 0.5 }}
             >
-              {t('saveProject')}
+              {isFilesEmpty ? t('openProjects') : t('saveProject')}
             </Button>
           </Box>
         </Toolbar>
@@ -1377,14 +1094,39 @@ export default function AppShell() {
           height: 'calc(100dvh - 64px)',
           minHeight: 'calc(100vh - 64px)',
           display: 'grid',
-          gridTemplateColumns: medium
-            ? `${railWidth}px minmax(0, 1fr)`
-            : `${drawerCurrentWidth}px minmax(0, 1fr)`,
+          gridTemplateColumns: activeNav === 'withAI'
+            ? `320px minmax(0, 1fr)` // Fixed width for AI sidebar
+            : medium
+              ? `${railWidth}px minmax(0, 1fr)`
+              : `${drawerCurrentWidth}px minmax(0, 1fr)`,
           gap: 0.5,
         }}
       >
-        {railNavigation}
-        {drawerNavigation}
+        {activeNav === 'withAI' ? (
+          <Paper
+            sx={(theme) => ({
+              borderRadius: 4,
+              overflow: 'hidden',
+              backgroundColor: theme.custom.surfaceContainer,
+              border: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+            })}
+          >
+            <AIEditorView
+              onApply={handleAIApply}
+              t={t}
+              currentUser={currentUser}
+              onLogin={() => setLoginOpen(true)}
+              onBack={() => setActiveNav('workspace')}
+            />
+          </Paper>
+        ) : (
+          <>
+            {railNavigation}
+            {drawerNavigation}
+          </>
+        )}
 
         <Box
           component="main"
@@ -1392,13 +1134,14 @@ export default function AppShell() {
             minHeight: 0,
             height: '100%',
             display: 'grid',
-            gridTemplateRows: 'minmax(0, 1fr)',
-            gap: '4px',
-            borderRadius: 4,
-            p: '4px',
+            gridTemplateRows: (!compact && !medium) ? 'minmax(0, 1fr) auto' : 'minmax(0, 1fr)',
+            gap: '2px',
+            borderRadius: 2,
+            p: '2px',
             backgroundColor: theme.custom.surfaceContainer,
           })}
         >
+
           <Box
             sx={(theme) => ({
               minHeight: 0,
@@ -1406,9 +1149,9 @@ export default function AppShell() {
               display: 'grid',
               gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
               gridTemplateRows: 'repeat(2, minmax(0, 1fr))',
-              gap: '4px',
-              p: '4px',
-              borderRadius: 3,
+              gap: '2px',
+              p: '2px',
+              borderRadius: 1.5,
               overflow: 'hidden',
               backgroundColor: theme.palette.background.paper,
             })}
@@ -1442,10 +1185,61 @@ export default function AppShell() {
             />
             <PreviewPane
               previewFiles={state.previewFiles}
+              previewVersion={state.previewVersion}
               language={state.language}
               t={t}
             />
           </Box>
+
+          {!compact && (
+            <Box
+              sx={{
+                mt: 'auto',
+                px: 2,
+                py: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 3,
+              }}
+            >
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                © 2024 CookWire
+              </Typography>
+              <Box sx={{ flexGrow: 1 }} />
+              <Button
+                size="small"
+                variant="text"
+                sx={{ color: 'text.secondary', fontSize: '0.75rem', textTransform: 'none' }}
+                onClick={() => handleOpenInfo('company')}
+              >
+                {t('company') || 'Company'}
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                sx={{ color: 'text.secondary', fontSize: '0.75rem', textTransform: 'none' }}
+                onClick={() => handleOpenInfo('privacy')}
+              >
+                {t('privacy') || 'Privacy'}
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                sx={{ color: 'text.secondary', fontSize: '0.75rem', textTransform: 'none' }}
+                onClick={() => handleOpenInfo('terms')}
+              >
+                {t('terms') || 'Terms'}
+              </Button>
+              <Button
+                size="small"
+                variant="text"
+                sx={{ color: 'text.secondary', fontSize: '0.75rem', textTransform: 'none' }}
+                onClick={() => handleOpenInfo('oss')}
+              >
+                {t('ossLicenses') || 'OSS Licenses'}
+              </Button>
+            </Box>
+          )}
         </Box>
       </Box>
 
@@ -1457,28 +1251,18 @@ export default function AppShell() {
       />
 
       <SearchReplacePanel
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        query={searchState.query}
-        replaceValue={searchState.replaceValue}
-        caseSensitive={searchState.caseSensitive}
-        matches={searchMatches.length}
-        onChangeQuery={(value) =>
-          setSearchState((prev) => ({ ...prev, query: value, cursor: -1 }))
-        }
-        onChangeReplace={(value) =>
-          setSearchState((prev) => ({ ...prev, replaceValue: value }))
-        }
-        onToggleCase={(checked) =>
-          setSearchState((prev) => ({
-            ...prev,
-            caseSensitive: checked,
-            cursor: -1,
-          }))
-        }
-        onFindNext={handleFindNext}
-        onReplaceNext={handleReplaceNext}
-        onReplaceAll={handleReplaceAll}
+        open={searchReplace.open}
+        onClose={searchReplace.closeSearch}
+        query={searchReplace.query}
+        replaceValue={searchReplace.replaceValue}
+        caseSensitive={searchReplace.caseSensitive}
+        matches={searchReplace.matches.length}
+        onChangeQuery={searchReplace.setQuery}
+        onChangeReplace={searchReplace.setReplaceValue}
+        onToggleCase={searchReplace.setCaseSensitive}
+        onFindNext={searchReplace.handleFindNext}
+        onReplaceNext={searchReplace.handleReplaceNext}
+        onReplaceAll={searchReplace.handleReplaceAll}
         t={t}
       />
 
@@ -1490,6 +1274,7 @@ export default function AppShell() {
         error={projectsError}
         onReload={() => void loadProjectList()}
         onLoadProject={(id) => void handleLoadProject(id)}
+        onOpenLocalFolder={handleOpenLocalFolder}
         t={t}
       />
 
@@ -1563,6 +1348,72 @@ export default function AppShell() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog
+        open={loginOpen}
+        onClose={() => setLoginOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            backgroundImage: 'none',
+            bgcolor: 'background.paper',
+            p: 3,
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+
+
+          <Typography variant="headlineSmall" component="h2" sx={{ mb: 1, fontWeight: 700 }}>
+            {t('welcome') || 'Welcome to CookWire'}
+          </Typography>
+
+          <Typography variant="bodyMedium" color="text.secondary" sx={{ mb: 4, maxWidth: 280, lineHeight: 1.6 }}>
+            ログインすると、AI機能が使用できるようになります
+          </Typography>
+
+          <Button
+            variant="outlined"
+            fullWidth
+            startIcon={<Google />}
+            onClick={handleGoogleLogin}
+            sx={{
+              py: 1.5,
+              borderRadius: 999,
+              color: 'text.primary',
+              borderColor: 'divider',
+              textTransform: 'none',
+              fontSize: '1rem',
+              fontWeight: 500,
+              justifyContent: 'center',
+              position: 'relative',
+              '&:hover': {
+                borderColor: 'divider',
+                bgcolor: 'action.hover',
+              }
+            }}
+          >
+            Sign in with Google
+          </Button>
+
+          <Button
+            onClick={() => setLoginOpen(false)}
+            variant="text"
+            sx={{ mt: 2, borderRadius: 999, px: 3, textTransform: 'none', color: 'text.secondary' }}
+          >
+            Continue as Guest
+          </Button>
+        </Box>
+      </Dialog>
+
+      <InfoView
+        open={infoOpen}
+        type={infoType}
+        onClose={() => setInfoOpen(false)}
+        t={t}
+      />
 
       <Snackbar
         open={Boolean(snackbar.message)}

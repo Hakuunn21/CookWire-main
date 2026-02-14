@@ -5,20 +5,32 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  Divider,
   List,
   ListItem,
   ListItemText,
   Typography,
 } from '@mui/material'
+import { FolderOpenRounded } from '@mui/icons-material'
 
-export default function ProjectBrowser({ open, onClose, projects, loading, error, onReload, onLoadProject, t }) {
+export default function ProjectBrowser({ open, onClose, projects, loading, error, onReload, onLoadProject, onOpenLocalFolder, t }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>{t('projectListTitle')}</DialogTitle>
       <DialogContent>
-        <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ mb: 2, display: 'flex', gap: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <Button
+            variant="outlined"
+            startIcon={<FolderOpenRounded />}
+            onClick={onOpenLocalFolder}
+          >
+            {t('openLocalFolder')}
+          </Button>
+          <Box sx={{ flex: 1 }} />
           <Button onClick={onReload} disabled={loading}>Reload</Button>
         </Box>
+
+        <Divider sx={{ mb: 2 }} />
 
         {error ? (
           <Alert severity="error" sx={{ mb: 2 }}>

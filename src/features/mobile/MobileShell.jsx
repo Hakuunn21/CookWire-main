@@ -28,10 +28,16 @@ import {
   FileDownloadRounded,
   BuildRounded,
   DragHandleRounded,
+  LoginRounded,
+  LogoutRounded,
+  InfoOutlined,
+  SecurityRounded,
+  GavelRounded,
 } from '@mui/icons-material'
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import MobileConsolePanel from './MobileConsolePanel'
 import PreviewPane from '../preview/PreviewPane'
+import AIEditorView from '../ai/AIEditorView'
 
 const FILE_KEYS = ['html', 'css', 'js']
 
@@ -50,7 +56,12 @@ const MobileShell = memo(function MobileShell({
   onSaveLocationOpen,
   onToggleTheme,
   onFormat,
+  onAIApply,
   onRun,
+  onOpenInfo,
+  currentUser,
+  onLogin,
+  onLogout,
 }) {
   const [viewMode, setViewMode] = useState('editor') // 'editor' | 'preview'
   const [menuAnchor, setMenuAnchor] = useState(null)
@@ -62,6 +73,10 @@ const MobileShell = memo(function MobileShell({
     () => state.files[activeFile].split('\n').length,
     [state.files, activeFile],
   )
+
+  const isFilesEmpty = useMemo(() => {
+    return Object.values(state.files).every((content) => !content.trim())
+  }, [state.files])
 
   const registerRef = useCallback(
     (fileKey, node) => {
@@ -118,6 +133,11 @@ const MobileShell = memo(function MobileShell({
         case 'download':
           onSaveLocationOpen()
           break
+        case 'company':
+        case 'privacy':
+        case 'terms':
+          onOpenInfo(action)
+          break
         default:
           break
       }
@@ -132,6 +152,7 @@ const MobileShell = memo(function MobileShell({
       onOpenSettings,
       onSaveLocationOpen,
       state.activeFile,
+      onOpenInfo,
     ],
   )
 
@@ -215,14 +236,24 @@ const MobileShell = memo(function MobileShell({
           )}
         </IconButton>
 
-        {/* Save */}
+        {/* Save or Open */}
         <IconButton
           size="small"
-          onClick={onSaveLocationOpen}
-          disabled={state.cloud.saving}
+          onClick={() => {
+            if (isFilesEmpty) {
+              onOpenProjects()
+            } else {
+              onSaveLocationOpen()
+            }
+          }}
+          disabled={!isFilesEmpty && state.cloud.saving}
           sx={{ p: 0.5 }}
         >
-          <SaveRounded sx={{ fontSize: 20 }} />
+          {isFilesEmpty ? (
+            <FolderOpenRounded sx={{ fontSize: 20 }} />
+          ) : (
+            <SaveRounded sx={{ fontSize: 20 }} />
+          )}
         </IconButton>
 
         {/* More menu */}
@@ -324,7 +355,7 @@ const MobileShell = memo(function MobileShell({
         )}
       </Box>
 
-      {/* ── Main Content Area (Editor OR Preview) ── */}
+      {/* ── Main Content Area (Editor OR Preview OR AI) ── */}
       <Box
         sx={{
           flex: 1,
@@ -334,81 +365,93 @@ const MobileShell = memo(function MobileShell({
           overflow: 'hidden',
         }}
       >
-        {/* Editor Panel */}
-        <Box
-          sx={(theme) => ({
-            flex: 1,
-            display: viewMode === 'editor' ? 'flex' : 'none',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            backgroundColor: theme.custom.workspaceCanvas,
-          })}
-        >
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
-            {FILE_KEYS.map((fileKey) => {
-              const visible = activeFile === fileKey
-              return (
-                <Box
-                  key={fileKey}
-                  role="tabpanel"
-                  hidden={!visible}
-                  sx={{
-                    display: visible ? 'block' : 'none',
-                    height: '100%',
-                  }}
-                >
-                  <Box
-                    component="textarea"
-                    ref={(node) => registerRef(fileKey, node)}
-                    aria-label={`${t('ariaEditor')} ${fileKey}`}
-                    value={state.files[fileKey]}
-                    onChange={(e) =>
-                      dispatch({
-                        type: 'SET_FILE_CONTENT',
-                        payload: { file: fileKey, value: e.target.value },
-                      })
-                    }
-                    spellCheck={false}
-                    className="editor-textarea"
-                    placeholder={
-                      fileKey === 'html'
-                        ? '<section>...</section>'
-                        : fileKey === 'css'
-                          ? '.class { ... }'
-                          : 'console.log()'
-                    }
-                    style={{
-                      fontFamily: '"Google Sans", monospace',
-                      fontSize: `${state.editorPrefs.fontSize}px`,
-                      lineHeight: state.editorPrefs.lineHeight,
-                      color: 'inherit',
-                    }}
-                  />
-                </Box>
-              )
-            })}
-          </Box>
-        </Box>
+        {state.activeNav === 'withAI' ? (
+          <AIEditorView
+            onApply={onAIApply}
+            t={t}
+            currentUser={currentUser}
+            onLogin={onLogin}
+          />
+        ) : (
+          <>
+            {/* Editor Panel */}
+            <Box
+              sx={(theme) => ({
+                flex: 1,
+                display: viewMode === 'editor' ? 'flex' : 'none',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                backgroundColor: theme.custom.workspaceCanvas,
+              })}
+            >
+              <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+                {FILE_KEYS.map((fileKey) => {
+                  const visible = activeFile === fileKey
+                  return (
+                    <Box
+                      key={fileKey}
+                      role="tabpanel"
+                      hidden={!visible}
+                      sx={{
+                        display: visible ? 'block' : 'none',
+                        height: '100%',
+                      }}
+                    >
+                      <Box
+                        component="textarea"
+                        ref={(node) => registerRef(fileKey, node)}
+                        aria-label={`${t('ariaEditor')} ${fileKey}`}
+                        value={state.files[fileKey]}
+                        onChange={(e) =>
+                          dispatch({
+                            type: 'SET_FILE_CONTENT',
+                            payload: { file: fileKey, value: e.target.value },
+                          })
+                        }
+                        spellCheck={false}
+                        className="editor-textarea"
+                        placeholder={
+                          fileKey === 'html'
+                            ? '<section>...</section>'
+                            : fileKey === 'css'
+                              ? '.class { ... }'
+                              : 'console.log()'
+                        }
+                        style={{
+                          fontFamily: '"Google Sans", monospace',
+                          fontSize: `${state.editorPrefs.fontSize}px`,
+                          lineHeight: state.editorPrefs.lineHeight,
+                          color: 'inherit',
+                        }}
+                      />
+                    </Box>
+                  )
+                })}
+              </Box>
+            </Box>
 
-        {/* Preview Panel */}
-        <Box
-          sx={(theme) => ({
-            flex: 1,
-            display: viewMode === 'preview' ? 'flex' : 'none',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            backgroundColor: theme.custom.workspaceCanvas,
-          })}
-        >
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            <PreviewPane
-              previewFiles={state.previewFiles}
-              language={state.language}
-              t={t}
-              mobile
-            />
-          </Box>
-        </Box>
+            {/* Preview Panel */}
+            <Box
+              sx={(theme) => ({
+                flex: 1,
+                display: viewMode === 'preview' ? 'flex' : 'none',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                backgroundColor: theme.custom.workspaceCanvas,
+              })}
+            >
+              <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+                <PreviewPane
+                  previewFiles={state.previewFiles}
+                  previewVersion={state.previewVersion}
+                  language={state.language}
+                  t={t}
+                  mobile
+                />
+              </Box>
+            </Box>
+          </>
+        )}
       </Box>
 
 
@@ -476,9 +519,43 @@ const MobileShell = memo(function MobileShell({
           <ListItemText>{t('settings')}</ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => handleMenuAction('save')}>
-          <ListItemIcon><FileDownloadRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('saveProject')}</ListItemText>
+        <MenuItem onClick={() => handleMenuAction(isFilesEmpty ? 'projects' : 'save')}>
+          <ListItemIcon>
+            {isFilesEmpty ? (
+              <FolderOpenRounded fontSize="small" />
+            ) : (
+              <FileDownloadRounded fontSize="small" />
+            )}
+          </ListItemIcon>
+          <ListItemText>
+            {isFilesEmpty ? t('openProjects') : t('saveProject')}
+          </ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => handleMenuAction('company')}>
+          <ListItemIcon><InfoOutlined fontSize="small" /></ListItemIcon>
+          <ListItemText>{t('company')}</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleMenuAction('privacy')}>
+          <ListItemIcon><SecurityRounded fontSize="small" /></ListItemIcon>
+          <ListItemText>{t('privacy')}</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleMenuAction('terms')}>
+          <ListItemIcon><GavelRounded fontSize="small" /></ListItemIcon>
+          <ListItemText>{t('terms')}</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => {
+          handleMenuClose()
+          if (currentUser) onLogout()
+          else onLogin()
+        }}>
+          <ListItemIcon>
+            {currentUser ? <LogoutRounded fontSize="small" /> : <LoginRounded fontSize="small" />}
+          </ListItemIcon>
+          <ListItemText>
+            {currentUser ? 'Log out' : (t('login') || 'Log in')}
+          </ListItemText>
         </MenuItem>
       </Menu>
     </Box>

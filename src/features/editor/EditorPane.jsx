@@ -1,5 +1,6 @@
 import { Box, Paper, Typography } from '@mui/material'
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useRef } from 'react'
+import { useCodeAssist } from './useCodeAssist'
 
 function placeholderFor(fileKey) {
   if (fileKey === 'html') return '<section>...</section>'
@@ -17,9 +18,11 @@ const EditorPane = memo(function EditorPane({
   t,
 }) {
   const lines = useMemo(() => value.split('\n').length, [value])
+  const internalRef = useRef(null)
 
   const refCallback = useCallback(
     (node) => {
+      internalRef.current = node
       onRegisterEditorRef(fileKey, node)
     },
     [fileKey, onRegisterEditorRef],
@@ -39,11 +42,20 @@ const EditorPane = memo(function EditorPane({
     [dispatch, fileKey],
   )
 
+  const handleDirectUpdate = useCallback((newValue) => {
+    dispatch({
+      type: 'SET_FILE_CONTENT',
+      payload: { file: fileKey, value: newValue },
+    })
+  }, [dispatch, fileKey])
+
+  const handleKeyDown = useCodeAssist(value, handleDirectUpdate, internalRef)
+
   return (
     <Paper
       sx={(theme) => ({
         height: '100%',
-        borderRadius: 2,
+        borderRadius: 1,
         p: 0.75,
         display: 'grid',
         gridTemplateRows: 'auto 1fr',
@@ -61,7 +73,7 @@ const EditorPane = memo(function EditorPane({
       <Box
         sx={{
           minHeight: 0,
-          borderRadius: 1.5,
+          borderRadius: 0.75,
           overflow: 'hidden',
           backgroundColor: 'transparent',
         }}
@@ -73,6 +85,7 @@ const EditorPane = memo(function EditorPane({
           value={value}
           onFocus={handleFocus}
           onChange={handleChange}
+          onKeyDown={handleKeyDown}
           spellCheck={false}
           className="editor-textarea"
           placeholder={placeholderFor(fileKey)}

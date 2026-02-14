@@ -1,4 +1,3 @@
-/* eslint-env node */
 /* global process */
 import express from 'express'
 import cors from 'cors'
@@ -6,7 +5,9 @@ import rateLimit from 'express-rate-limit'
 import morgan from 'morgan'
 import { z } from 'zod'
 import { createProjectsRepository } from './storage/projectsRepository.js'
-import { getOwnerKeyFromRequest, hashOwnerKey } from './security/ownerKey.js'
+import { streamText } from 'ai'
+import { requireOwner } from './middleware/auth.js'
+import { myMockModel } from './services/mockAi.js'
 
 const PORT = process.env.PORT || 3001
 const CORS_ALLOW_ORIGINS = process.env.CORS_ALLOW_ORIGINS || 'http://localhost:5173,http://localhost:5177'
@@ -22,6 +23,20 @@ const corsOrigin = allowedOrigins.includes('*') ? '*' : allowedOrigins
 app.use(cors({ origin: corsOrigin }))
 app.use(express.json({ limit: '2mb' }))
 app.use(morgan('combined'))
+
+app.post('/api/chat', requireOwner, async (req, res) => {
+  try {
+    const { messages } = req.body
+    const result = await streamText({
+      model: myMockModel,
+      messages,
+    })
+    result.pipeDataStreamToResponse(res)
+  } catch (error) {
+    console.error('AI Error:', error)
+    res.status(500).json({ error: 'Failed to process chat' })
+  }
+})
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -50,23 +65,12 @@ const projectSchema = z.object({
   }),
 })
 
-function requireOwner(req, res) {
-  const ownerKeyResult = getOwnerKeyFromRequest(req)
-  if (!ownerKeyResult.ok) {
-    res.status(400).json({ error: ownerKeyResult.error })
-    return null
-  }
-  return hashOwnerKey(ownerKeyResult.value)
-}
-
 app.get('/health', (req, res) => {
   return res.json({ ok: true, version: '2.0.0' })
 })
 
-app.get('/api/projects', apiLimiter, (req, res) => {
-  const ownerKeyHash = requireOwner(req, res)
-  if (!ownerKeyHash) return
-
+app.get('/api/projects', apiLimiter, requireOwner, (req, res) => {
+  const { ownerKeyHash } = req
   const rawLimit = Number.parseInt(req.query.limit, 10)
   const rawOffset = Number.parseInt(req.query.offset, 10)
   const limit = Number.isNaN(rawLimit) ? 50 : Math.max(1, Math.min(rawLimit, 200))
@@ -76,20 +80,16 @@ app.get('/api/projects', apiLimiter, (req, res) => {
   return res.json({ data })
 })
 
-app.get('/api/projects/:id', apiLimiter, (req, res) => {
-  const ownerKeyHash = requireOwner(req, res)
-  if (!ownerKeyHash) return
-
+app.get('/api/projects/:id', apiLimiter, requireOwner, (req, res) => {
+  const { ownerKeyHash } = req
   const row = repository.getById(req.params.id)
   if (!row) return res.status(404).json({ error: 'Not found' })
   if (row.ownerKeyHash !== ownerKeyHash) return res.status(403).json({ error: 'Forbidden' })
   return res.json({ data: row.project })
 })
 
-app.post('/api/projects', apiLimiter, (req, res) => {
-  const ownerKeyHash = requireOwner(req, res)
-  if (!ownerKeyHash) return
-
+app.post('/api/projects', apiLimiter, requireOwner, (req, res) => {
+  const { ownerKeyHash } = req
   const parsed = projectSchema.safeParse(req.body || {})
   if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
@@ -99,10 +99,8 @@ app.post('/api/projects', apiLimiter, (req, res) => {
   return res.status(201).json({ data })
 })
 
-app.put('/api/projects/:id', apiLimiter, (req, res) => {
-  const ownerKeyHash = requireOwner(req, res)
-  if (!ownerKeyHash) return
-
+app.put('/api/projects/:id', apiLimiter, requireOwner, (req, res) => {
+  const { ownerKeyHash } = req
   const existing = repository.getById(req.params.id)
   if (!existing) return res.status(404).json({ error: 'Not found' })
   if (existing.ownerKeyHash !== ownerKeyHash) return res.status(403).json({ error: 'Forbidden' })
@@ -115,12 +113,6 @@ app.put('/api/projects/:id', apiLimiter, (req, res) => {
   const data = repository.update({ id: req.params.id, payload: parsed.data })
   return res.json({ data })
 })
-
-const goneMessage = {
-  error: 'Deprecated endpoint. Use /api/projects with X-CookWire-Owner-Key.',
-}
-app.all('/api/fiddles', (req, res) => res.status(410).json(goneMessage))
-app.all('/api/fiddles/:id', (req, res) => res.status(410).json(goneMessage))
 
 // eslint-disable-next-line no-unused-vars
 app.use((error, req, res, next) => {

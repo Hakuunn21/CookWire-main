@@ -74,7 +74,6 @@ const MobileConsolePanel = memo(function MobileConsolePanel({
   return (
     <Box
       sx={(theme) => ({
-        borderTop: `1px solid ${theme.palette.divider}`,
         backgroundColor: theme.custom.workspaceCanvas,
         display: 'flex',
         flexDirection: 'column',
