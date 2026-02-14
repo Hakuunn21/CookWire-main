@@ -97,21 +97,63 @@ export function useProjectManagement(
     )
 
     const handleOpenLocalFolder = useCallback(async () => {
-        try {
-            if (!window.showDirectoryPicker) {
-                throw new Error('File System Access API is not supported in this browser.')
+        if (window.showDirectoryPicker) {
+            try {
+                const dirHandle = await window.showDirectoryPicker()
+                const files = { html: '', css: '', js: '' }
+                let title = dirHandle.name
+
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file') {
+                        const file = await entry.getFile()
+                        const content = await file.text()
+                        const name = entry.name.toLowerCase()
+
+                        if (name.endsWith('.html')) {
+                            files.html = content
+                        } else if (name.endsWith('.css')) {
+                            files.css = content
+                        } else if (name.endsWith('.js')) {
+                            files.js = content
+                        }
+                    }
+                }
+
+                dispatch({
+                    type: 'SET_PROJECT',
+                    payload: {
+                        id: null,
+                        title,
+                        files,
+                        language: state.language,
+                        theme: state.themeMode,
+                    },
+                })
+                setProjectsOpen(false)
+                setSnackbar({ type: 'success', message: `Opened folder: ${title}` })
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    setSnackbar({ type: 'error', message: error.message })
+                }
             }
+        } else {
+            // Fallback for browsers that don't support File System Access API
+            const input = document.createElement('input')
+            input.type = 'file'
+            // @ts-ignore
+            input.webkitdirectory = true
 
-            const dirHandle = await window.showDirectoryPicker()
-            const files = { html: '', css: '', js: '' }
-            let title = dirHandle.name
+            input.onchange = async (e) => {
+                const selectedFiles = Array.from(e.target.files || [])
+                if (selectedFiles.length === 0) return
 
-            for await (const entry of dirHandle.values()) {
-                if (entry.kind === 'file') {
-                    const file = await entry.getFile()
+                const files = { html: '', css: '', js: '' }
+                const firstPath = selectedFiles[0].webkitRelativePath
+                const folderName = firstPath.split('/')[0] || 'Local Folder'
+
+                for (const file of selectedFiles) {
+                    const name = file.name.toLowerCase()
                     const content = await file.text()
-                    const name = entry.name.toLowerCase()
-
                     if (name.endsWith('.html')) {
                         files.html = content
                     } else if (name.endsWith('.css')) {
@@ -120,24 +162,21 @@ export function useProjectManagement(
                         files.js = content
                     }
                 }
-            }
 
-            dispatch({
-                type: 'SET_PROJECT',
-                payload: {
-                    id: null,
-                    title,
-                    files,
-                    language: state.language,
-                    theme: state.themeMode,
-                },
-            })
-            setProjectsOpen(false)
-            setSnackbar({ type: 'success', message: `Opened folder: ${title}` })
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                setSnackbar({ type: 'error', message: error.message })
+                dispatch({
+                    type: 'SET_PROJECT',
+                    payload: {
+                        id: null,
+                        title: folderName,
+                        files,
+                        language: state.language,
+                        theme: state.themeMode,
+                    },
+                })
+                setProjectsOpen(false)
+                setSnackbar({ type: 'success', message: `Opened folder: ${folderName}` })
             }
+            input.click()
         }
     }, [dispatch, state.language, state.themeMode, setSnackbar])
 

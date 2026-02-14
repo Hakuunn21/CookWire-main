@@ -241,12 +241,12 @@ const MobileShell = memo(function MobileShell({
           size="small"
           onClick={() => {
             if (isFilesEmpty) {
-              onOpenProjects()
+              // onOpenProjects()
             } else {
               onSaveLocationOpen()
             }
           }}
-          disabled={!isFilesEmpty && state.cloud.saving}
+          disabled={isFilesEmpty || state.cloud.saving}
           sx={{ p: 0.5 }}
         >
           {isFilesEmpty ? (
@@ -506,9 +506,9 @@ const MobileShell = memo(function MobileShell({
           <ListItemText>{t('formatAll')}</ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => handleMenuAction('projects')}>
+        <MenuItem disabled={true} onClick={() => handleMenuAction('projects')}>
           <ListItemIcon><FolderOpenRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('projects')}</ListItemText>
+          <ListItemText>{t('projects') || 'Projects (Coming soon)'}</ListItemText>
         </MenuItem>
         <MenuItem onClick={() => handleMenuAction('minitool')}>
           <ListItemIcon><BuildRounded fontSize="small" /></ListItemIcon>
@@ -528,7 +528,7 @@ const MobileShell = memo(function MobileShell({
             )}
           </ListItemIcon>
           <ListItemText>
-            {isFilesEmpty ? t('openProjects') : t('saveProject')}
+            {isFilesEmpty ? (t('projects') || 'Projects (Coming soon)') : t('saveProject')}
           </ListItemText>
         </MenuItem>
         <Divider />
@@ -545,7 +545,7 @@ const MobileShell = memo(function MobileShell({
           <ListItemText>{t('terms')}</ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => {
+        <MenuItem disabled={true} onClick={() => {
           handleMenuClose()
           if (currentUser) onLogout()
           else onLogin()
@@ -554,7 +554,7 @@ const MobileShell = memo(function MobileShell({
             {currentUser ? <LogoutRounded fontSize="small" /> : <LoginRounded fontSize="small" />}
           </ListItemIcon>
           <ListItemText>
-            {currentUser ? 'Log out' : (t('login') || 'Log in')}
+            {currentUser ? 'Log out' : (t('login') || 'Log in (Coming soon)')}
           </ListItemText>
         </MenuItem>
       </Menu>

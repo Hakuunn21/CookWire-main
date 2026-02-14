@@ -321,18 +321,21 @@ export default function AIEditorView({ onApply, currentUser, onLogin, t, onBack 
             color="primary"
             size="small"
             sx={{
-              p: 1,
-              mr: 0.5,
+              p: 0.75, // Reduced padding
+              mr: 0.75, // Adjusted margin to be more symmetrical with the rounded end
               transition: 'all 0.2s',
-              opacity: (!inputValue.trim() || isLoading) ? 0.5 : 1,
-              bgcolor: inputValue.trim() ? (isDark ? 'primary.main' : 'primary.main') : 'transparent',
-              color: inputValue.trim() ? (isDark ? 'primary.contrastText' : 'primary.contrastText') : 'text.disabled',
+              opacity: (!inputValue.trim() || isLoading) ? 0.4 : 1,
+              bgcolor: inputValue.trim() ? 'primary.main' : 'transparent',
+              color: inputValue.trim() ? 'primary.contrastText' : 'text.disabled',
               '&:hover': {
                 bgcolor: inputValue.trim() ? 'primary.dark' : 'transparent',
-              }
+              },
+              // Ensure it's a perfect circle and centered
+              width: 32,
+              height: 32,
             }}
           >
-            <SendRounded fontSize="small" />
+            <SendRounded sx={{ fontSize: 18 }} />
           </IconButton>
         </Paper>
       </Box>

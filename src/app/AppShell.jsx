@@ -480,7 +480,11 @@ export default function AppShell() {
             <ListItemButton
               key={item.key}
               selected={selected}
-              onClick={() => activateDestination(item.key)}
+              onClick={() => {
+                if (item.key === 'projects' || item.key === 'withAI') return
+                activateDestination(item.key)
+              }}
+              disabled={item.key === 'projects' || item.key === 'withAI'}
               aria-label={item.label}
               sx={{
                 minHeight: 68,
@@ -490,6 +494,7 @@ export default function AppShell() {
                 alignItems: 'center',
                 flexDirection: 'column',
                 gap: 0.5,
+                opacity: (item.key === 'projects' || item.key === 'withAI') ? 0.5 : 1,
               }}
             >
               <Box
@@ -551,6 +556,7 @@ export default function AppShell() {
         ))}
         <ListItemButton
           key="login"
+          disabled={true}
           onClick={() => {
             if (currentUser) {
               setCurrentUser(null)
@@ -559,7 +565,7 @@ export default function AppShell() {
               setLoginOpen(true)
             }
           }}
-          aria-label={currentUser ? 'Log out' : (t('login') || 'Log in')}
+          aria-label={currentUser ? 'Log out' : (t('login') || 'Log in (Coming soon)')}
           sx={{
             minHeight: 64,
             px: 0.5,
@@ -568,6 +574,7 @@ export default function AppShell() {
             alignItems: 'center',
             flexDirection: 'column',
             gap: 0.5,
+            opacity: 0.5,
           }}
         >
           <Box
@@ -584,7 +591,7 @@ export default function AppShell() {
             {currentUser ? <LogoutRounded /> : <LoginRounded />}
           </Box>
           <Typography variant="labelSmall" sx={{ color: 'text.secondary' }}>
-            {currentUser ? 'Log out' : (t('login') || 'Log in')}
+            {currentUser ? 'Log out' : (t('login') || 'Log in (Coming soon)')}
           </Typography>
         </ListItemButton>
       </List>
@@ -644,12 +651,17 @@ export default function AppShell() {
             <ListItemButton
               key={item.key}
               selected={activeNav === item.key}
-              onClick={() => activateDestination(item.key)}
+              disabled={item.key === 'projects' || item.key === 'withAI'}
+              onClick={() => {
+                if (item.key === 'projects' || item.key === 'withAI') return
+                activateDestination(item.key)
+              }}
               aria-label={item.label}
               sx={{
                 minHeight: 52,
                 px: drawerIconOnly ? 0 : 1.25,
                 justifyContent: drawerIconOnly ? 'center' : 'flex-start',
+                opacity: (item.key === 'projects' || item.key === 'withAI') ? 0.5 : 1,
               }}
             >
               <ListItemIcon
@@ -730,6 +742,7 @@ export default function AppShell() {
         </List>
         <ListItemButton
           key="login"
+          disabled={true}
           onClick={() => {
             if (currentUser) {
               setCurrentUser(null)
@@ -738,11 +751,12 @@ export default function AppShell() {
               setLoginOpen(true)
             }
           }}
-          aria-label={currentUser ? 'Log out' : (t('login') || 'Log in')}
+          aria-label={currentUser ? 'Log out' : (t('login') || 'Log in (Coming soon)')}
           sx={{
             minHeight: 50,
             px: drawerIconOnly ? 0 : 1.25,
             justifyContent: drawerIconOnly ? 'center' : 'flex-start',
+            opacity: 0.5,
           }}
         >
           <ListItemIcon
@@ -758,7 +772,7 @@ export default function AppShell() {
           </ListItemIcon>
           {drawerIconOnly ? null : (
             <ListItemText
-              primary={currentUser ? 'Log out' : (t('login') || 'Log in')}
+              primary={currentUser ? 'Log out' : (t('login') || 'Log in (Coming soon)')}
               sx={(theme) => ({
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
@@ -1036,8 +1050,9 @@ export default function AppShell() {
                 <KeyboardCommandKeyRounded />
               </IconButton>
             </Tooltip>
-            <Tooltip title={t('openProjects')}>
+            <Tooltip title={t('projects') || 'Projects (Coming soon)'}>
               <IconButton
+                disabled={true}
                 onClick={() => {
                   setActiveNav('projects')
                   void handleOpenProjects()
@@ -1318,9 +1333,9 @@ export default function AppShell() {
               fullWidth
               startIcon={<SaveRounded />}
               onClick={() => void handleSaveProject()}
-              disabled={state.cloud.saving}
+              disabled={true}
             >
-              {t('saveToServer')}
+              {t('saveToServer')} (Coming soon)
             </Button>
             <Button
               variant="contained"
@@ -1367,7 +1382,7 @@ export default function AppShell() {
 
 
           <Typography variant="headlineSmall" component="h2" sx={{ mb: 1, fontWeight: 700 }}>
-            {t('welcome') || 'Welcome to CookWire'}
+            {t('welcome') || 'Coming soon'}
           </Typography>
 
           <Typography variant="bodyMedium" color="text.secondary" sx={{ mb: 4, maxWidth: 280, lineHeight: 1.6 }}>
@@ -1379,6 +1394,7 @@ export default function AppShell() {
             fullWidth
             startIcon={<Google />}
             onClick={handleGoogleLogin}
+            disabled={true}
             sx={{
               py: 1.5,
               borderRadius: 999,
@@ -1389,13 +1405,14 @@ export default function AppShell() {
               fontWeight: 500,
               justifyContent: 'center',
               position: 'relative',
+              opacity: 0.5,
               '&:hover': {
                 borderColor: 'divider',
                 bgcolor: 'action.hover',
               }
             }}
           >
-            Sign in with Google
+            Sign in with Google (Coming soon)
           </Button>
 
           <Button
