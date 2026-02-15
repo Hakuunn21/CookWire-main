@@ -326,7 +326,7 @@ app.use('/api', (req, res) => {
 
 // SPAフォールバック - API以外のルートはindex.htmlにフォールバック
 // パストラバーサル対策：パスを検証
-app.get('*', (req, res, next) => {
+app.get('(.*)', (req, res, next) => {
   // APIリクエストは除外
   if (req.path.startsWith('/api/')) {
     return next()
