@@ -37,22 +37,40 @@ const MobileConsolePanel = memo(function MobileConsolePanel({
   const idRef = useRef(0)
 
   const handleMessage = useCallback((event) => {
-    if (event.data?.type === 'console') {
-      const { method, args } = event.data
-      if (['log', 'info', 'warn', 'error'].includes(method)) {
-        setLogs((prev) => [
-          ...prev.slice(-200),
-          {
-            id: ++idRef.current,
-            method,
-            text: args.map((a) =>
-              typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a),
-            ).join(' '),
-            timestamp: Date.now(),
-          },
-        ])
-      }
+    // SECURITY: Only accept messages from our own iframe
+    // The iframe is sandboxed with allow-same-origin, so it shares our origin
+    if (event.origin !== window.location.origin && event.origin !== 'null') {
+      return
     }
+    
+    // Validate message structure
+    if (!event.data || typeof event.data !== 'object' || event.data.type !== 'console') {
+      return
+    }
+    
+    const { method, args } = event.data
+    
+    // Validate method is allowed
+    if (!['log', 'info', 'warn', 'error'].includes(method)) {
+      return
+    }
+    
+    // Validate args is an array
+    if (!Array.isArray(args)) {
+      return
+    }
+    
+    setLogs((prev) => [
+      ...prev.slice(-200),
+      {
+        id: ++idRef.current,
+        method,
+        text: args.map((a) =>
+          typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a),
+        ).join(' '),
+        timestamp: Date.now(),
+      },
+    ])
   }, [])
 
   useEffect(() => {

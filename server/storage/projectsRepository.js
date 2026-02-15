@@ -3,6 +3,23 @@ import fs from 'node:fs'
 import path from 'node:path'
 import Database from 'better-sqlite3'
 
+// 安全なJSONパース（DoS対策）
+const MAX_JSON_SIZE = 10 * 1024 // 10KB
+
+function safeJsonParse(jsonString, defaultValue = {}) {
+  if (!jsonString) return defaultValue
+  if (jsonString.length > MAX_JSON_SIZE) {
+    console.warn('JSON string too large, returning default value')
+    return defaultValue
+  }
+  try {
+    return JSON.parse(jsonString)
+  } catch (error) {
+    console.warn('Failed to parse JSON:', error.message)
+    return defaultValue
+  }
+}
+
 function mapRow(row) {
   return {
     id: row.id,
@@ -14,8 +31,8 @@ function mapRow(row) {
     },
     language: row.language,
     theme: row.theme,
-    editorPrefs: JSON.parse(row.editor_prefs || '{}'),
-    workspacePrefs: JSON.parse(row.workspace_prefs || '{}'),
+    editorPrefs: safeJsonParse(row.editor_prefs),
+    workspacePrefs: safeJsonParse(row.workspace_prefs),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -30,14 +47,32 @@ function mapListRow(row) {
   }
 }
 
+// UUIDバリデーション
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isValidUUID(id) {
+  return typeof id === 'string' && UUID_REGEX.test(id)
+}
+
 export function createProjectsRepository({ dataDir, databasePath }) {
   const resolvedDataDir = dataDir || path.resolve('data')
   const resolvedDatabasePath = databasePath || path.join(resolvedDataDir, 'projects.db')
 
-  fs.mkdirSync(resolvedDataDir, { recursive: true })
+  // データディレクトリの作成（セキュアなパーミッションで）
+  fs.mkdirSync(resolvedDataDir, { recursive: true, mode: 0o700 })
 
   const db = new Database(resolvedDatabasePath)
+  
+  // データベースファイルのパーミッションを制限（ owner only: rw------- ）
+  try {
+    fs.chmodSync(resolvedDatabasePath, 0o600)
+  } catch (error) {
+    console.warn('Could not set database file permissions:', error.message)
+  }
+  
+  // WALモード設定（パフォーマンスと安全性のバランス）
   db.pragma('journal_mode = WAL')
+  db.pragma('synchronous = NORMAL')
 
   db.prepare(
     `CREATE TABLE IF NOT EXISTS projects (
@@ -87,8 +122,13 @@ export function createProjectsRepository({ dataDir, databasePath }) {
     },
 
     update({ id, payload }) {
+      // IDのバリデーション
+      if (!isValidUUID(id)) {
+        throw new Error('Invalid project ID format')
+      }
+      
       const now = new Date().toISOString()
-      db.prepare(
+      const result = db.prepare(
         `UPDATE projects SET
           title = @title,
           html = @html,
@@ -112,24 +152,49 @@ export function createProjectsRepository({ dataDir, databasePath }) {
         workspace_prefs: JSON.stringify(payload.workspacePrefs),
         updated_at: now,
       })
+      
+      // 更新が成功したか確認
+      if (result.changes === 0) {
+        return null
+      }
+      
       const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(id)
       return row ? mapRow(row) : null
     },
 
     listByOwner(ownerKeyHash, { limit = 100, offset = 0 } = {}) {
+      // パラメータのバリデーション
+      const safeLimit = Math.max(1, Math.min(Number(limit) || 50, 200))
+      const safeOffset = Math.max(0, Math.min(Number(offset) || 0, 10000))
+      
       const rows = db
         .prepare('SELECT id, title, created_at, updated_at FROM projects WHERE owner_key_hash = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?')
-        .all(ownerKeyHash, limit, offset)
+        .all(ownerKeyHash, safeLimit, safeOffset)
       return rows.map(mapListRow)
     },
 
     getById(id) {
+      // IDのバリデーション
+      if (!isValidUUID(id)) {
+        return null
+      }
+      
       const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(id)
       if (!row) return null
       return {
         ownerKeyHash: row.owner_key_hash,
         project: mapRow(row),
       }
+    },
+
+    delete(id) {
+      // IDのバリデーション
+      if (!isValidUUID(id)) {
+        return false
+      }
+      
+      const result = db.prepare('DELETE FROM projects WHERE id = ?').run(id)
+      return result.changes > 0
     },
   }
 }

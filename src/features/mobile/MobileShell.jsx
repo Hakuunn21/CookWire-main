@@ -37,7 +37,6 @@ import {
 import { memo, useCallback, useMemo, useRef, useState } from 'react'
 import MobileConsolePanel from './MobileConsolePanel'
 import PreviewPane from '../preview/PreviewPane'
-import AIEditorView from '../ai/AIEditorView'
 
 const FILE_KEYS = ['html', 'css', 'js']
 
@@ -56,7 +55,6 @@ const MobileShell = memo(function MobileShell({
   onSaveLocationOpen,
   onToggleTheme,
   onFormat,
-  onAIApply,
   onRun,
   onOpenInfo,
   currentUser,
@@ -355,7 +353,7 @@ const MobileShell = memo(function MobileShell({
         )}
       </Box>
 
-      {/* ── Main Content Area (Editor OR Preview OR AI) ── */}
+      {/* ── Main Content Area (Editor OR Preview) ── */}
       <Box
         sx={{
           flex: 1,
@@ -365,93 +363,82 @@ const MobileShell = memo(function MobileShell({
           overflow: 'hidden',
         }}
       >
-        {state.activeNav === 'withAI' ? (
-          <AIEditorView
-            onApply={onAIApply}
-            t={t}
-            currentUser={currentUser}
-            onLogin={onLogin}
-          />
-        ) : (
-          <>
-            {/* Editor Panel */}
-            <Box
-              sx={(theme) => ({
-                flex: 1,
-                display: viewMode === 'editor' ? 'flex' : 'none',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                backgroundColor: theme.custom.workspaceCanvas,
-              })}
-            >
-              <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
-                {FILE_KEYS.map((fileKey) => {
-                  const visible = activeFile === fileKey
-                  return (
-                    <Box
-                      key={fileKey}
-                      role="tabpanel"
-                      hidden={!visible}
-                      sx={{
-                        display: visible ? 'block' : 'none',
-                        height: '100%',
-                      }}
-                    >
-                      <Box
-                        component="textarea"
-                        ref={(node) => registerRef(fileKey, node)}
-                        aria-label={`${t('ariaEditor')} ${fileKey}`}
-                        value={state.files[fileKey]}
-                        onChange={(e) =>
-                          dispatch({
-                            type: 'SET_FILE_CONTENT',
-                            payload: { file: fileKey, value: e.target.value },
-                          })
-                        }
-                        spellCheck={false}
-                        className="editor-textarea"
-                        placeholder={
-                          fileKey === 'html'
-                            ? '<section>...</section>'
-                            : fileKey === 'css'
-                              ? '.class { ... }'
-                              : 'console.log()'
-                        }
-                        style={{
-                          fontFamily: '"Google Sans", monospace',
-                          fontSize: `${state.editorPrefs.fontSize}px`,
-                          lineHeight: state.editorPrefs.lineHeight,
-                          color: 'inherit',
-                        }}
-                      />
-                    </Box>
-                  )
-                })}
-              </Box>
-            </Box>
+        {/* Editor Panel */}
+        <Box
+          sx={(theme) => ({
+            flex: 1,
+            display: viewMode === 'editor' ? 'flex' : 'none',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            backgroundColor: theme.custom.workspaceCanvas,
+          })}
+        >
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+            {FILE_KEYS.map((fileKey) => {
+              const visible = activeFile === fileKey
+              return (
+                <Box
+                  key={fileKey}
+                  role="tabpanel"
+                  hidden={!visible}
+                  sx={{
+                    display: visible ? 'block' : 'none',
+                    height: '100%',
+                  }}
+                >
+                  <Box
+                    component="textarea"
+                    ref={(node) => registerRef(fileKey, node)}
+                    aria-label={`${t('ariaEditor')} ${fileKey}`}
+                    value={state.files[fileKey]}
+                    onChange={(e) =>
+                      dispatch({
+                        type: 'SET_FILE_CONTENT',
+                        payload: { file: fileKey, value: e.target.value },
+                      })
+                    }
+                    spellCheck={false}
+                    className="editor-textarea"
+                    placeholder={
+                      fileKey === 'html'
+                        ? '<section>...</section>'
+                        : fileKey === 'css'
+                          ? '.class { ... }'
+                          : 'console.log()'
+                    }
+                    style={{
+                      fontFamily: '"Google Sans", monospace',
+                      fontSize: `${state.editorPrefs.fontSize}px`,
+                      lineHeight: state.editorPrefs.lineHeight,
+                      color: 'inherit',
+                    }}
+                  />
+                </Box>
+              )
+            })}
+          </Box>
+        </Box>
 
-            {/* Preview Panel */}
-            <Box
-              sx={(theme) => ({
-                flex: 1,
-                display: viewMode === 'preview' ? 'flex' : 'none',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                backgroundColor: theme.custom.workspaceCanvas,
-              })}
-            >
-              <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                <PreviewPane
-                  previewFiles={state.previewFiles}
-                  previewVersion={state.previewVersion}
-                  language={state.language}
-                  t={t}
-                  mobile
-                />
-              </Box>
-            </Box>
-          </>
-        )}
+        {/* Preview Panel */}
+        <Box
+          sx={(theme) => ({
+            flex: 1,
+            display: viewMode === 'preview' ? 'flex' : 'none',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            backgroundColor: theme.custom.workspaceCanvas,
+          })}
+        >
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <PreviewPane
+              previewFiles={state.previewFiles}
+              previewVersion={state.previewVersion}
+              language={state.language}
+              t={t}
+              mobile
+            />
+          </Box>
+        </Box>
       </Box>
 
 

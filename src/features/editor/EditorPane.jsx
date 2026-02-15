@@ -1,6 +1,5 @@
 import { Box, Paper, Typography } from '@mui/material'
 import { memo, useCallback, useMemo, useRef } from 'react'
-import { useCodeAssist } from './useCodeAssist'
 
 function placeholderFor(fileKey) {
   if (fileKey === 'html') return '<section>...</section>'
@@ -42,15 +41,6 @@ const EditorPane = memo(function EditorPane({
     [dispatch, fileKey],
   )
 
-  const handleDirectUpdate = useCallback((newValue) => {
-    dispatch({
-      type: 'SET_FILE_CONTENT',
-      payload: { file: fileKey, value: newValue },
-    })
-  }, [dispatch, fileKey])
-
-  const handleKeyDown = useCodeAssist(value, handleDirectUpdate, internalRef)
-
   return (
     <Paper
       sx={(theme) => ({
@@ -85,7 +75,6 @@ const EditorPane = memo(function EditorPane({
           value={value}
           onFocus={handleFocus}
           onChange={handleChange}
-          onKeyDown={handleKeyDown}
           spellCheck={false}
           className="editor-textarea"
           placeholder={placeholderFor(fileKey)}

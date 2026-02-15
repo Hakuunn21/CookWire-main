@@ -15,7 +15,6 @@ import {
   CssRounded,
   JavascriptRounded,
   FileDownloadRounded,
-  AutoAwesomeRounded,
   Google,
 
 } from '@mui/icons-material'
@@ -51,7 +50,6 @@ import EditorPane from '../features/editor/EditorPane'
 import EditorWorkspace from '../features/editor/EditorWorkspace'
 import SearchReplacePanel from '../features/editor/SearchReplacePanel'
 import PreviewPane from '../features/preview/PreviewPane'
-import AIEditorView from '../features/ai/AIEditorView'
 import ProjectBrowser from '../features/project/ProjectBrowser'
 import SettingsView from '../features/settings/SettingsView'
 import MinitoolView from '../features/minitool/MinitoolView'
@@ -397,7 +395,6 @@ export default function AppShell() {
     () => [
       { key: 'workspace', label: t('workspace'), icon: <TerminalRounded /> },
       { key: 'projects', label: t('projects'), icon: <FolderOpenRounded /> },
-      { key: 'withAI', label: t('withAI'), icon: <AutoAwesomeRounded /> },
       { key: 'minitool', label: t('minitool'), icon: <BuildRounded /> },
       { key: 'settings', label: t('settings'), icon: <SettingsRounded /> },
     ],
@@ -429,19 +426,6 @@ export default function AppShell() {
       }
     },
     [handleOpenProjects],
-  )
-
-  const handleAIApply = useCallback(
-    (payload) => {
-      dispatch({ type: 'SET_FILES', payload })
-      setSnackbar({ type: 'success', message: t('aiSuccess') })
-      setActiveNav('workspace')
-      // プレビューを即座に更新
-      setTimeout(() => {
-        dispatch({ type: 'SYNC_PREVIEW_NOW' })
-      }, 100)
-    },
-    [dispatch, t],
   )
 
   const runSidebarAction = useCallback(
@@ -481,10 +465,10 @@ export default function AppShell() {
               key={item.key}
               selected={selected}
               onClick={() => {
-                if (item.key === 'projects' || item.key === 'withAI') return
+                if (item.key === 'projects') return
                 activateDestination(item.key)
               }}
-              disabled={item.key === 'projects' || item.key === 'withAI'}
+              disabled={item.key === 'projects'}
               aria-label={item.label}
               sx={{
                 minHeight: 68,
@@ -494,7 +478,7 @@ export default function AppShell() {
                 alignItems: 'center',
                 flexDirection: 'column',
                 gap: 0.5,
-                opacity: (item.key === 'projects' || item.key === 'withAI') ? 0.5 : 1,
+                opacity: (item.key === 'projects') ? 0.5 : 1,
               }}
             >
               <Box
@@ -651,9 +635,9 @@ export default function AppShell() {
             <ListItemButton
               key={item.key}
               selected={activeNav === item.key}
-              disabled={item.key === 'projects' || item.key === 'withAI'}
+              disabled={item.key === 'projects'}
               onClick={() => {
-                if (item.key === 'projects' || item.key === 'withAI') return
+                if (item.key === 'projects') return
                 activateDestination(item.key)
               }}
               aria-label={item.label}
@@ -661,7 +645,7 @@ export default function AppShell() {
                 minHeight: 52,
                 px: drawerIconOnly ? 0 : 1.25,
                 justifyContent: drawerIconOnly ? 'center' : 'flex-start',
-                opacity: (item.key === 'projects' || item.key === 'withAI') ? 0.5 : 1,
+                opacity: (item.key === 'projects') ? 0.5 : 1,
               }}
             >
               <ListItemIcon
@@ -845,7 +829,6 @@ export default function AppShell() {
           onSaveLocationOpen={() => setSaveLocationOpen(true)}
           onToggleTheme={toggleTheme}
           onFormat={handleFormat}
-          onAIApply={handleAIApply}
           onRun={() => {
             dispatch({ type: 'SYNC_PREVIEW_NOW' })
             setSnackbar({ type: 'success', message: t('previewUpdated') || 'Preview updated' })
@@ -1109,39 +1092,14 @@ export default function AppShell() {
           height: 'calc(100dvh - 64px)',
           minHeight: 'calc(100vh - 64px)',
           display: 'grid',
-          gridTemplateColumns: activeNav === 'withAI'
-            ? `320px minmax(0, 1fr)` // Fixed width for AI sidebar
-            : medium
+          gridTemplateColumns: medium
               ? `${railWidth}px minmax(0, 1fr)`
               : `${drawerCurrentWidth}px minmax(0, 1fr)`,
           gap: 0.5,
         }}
       >
-        {activeNav === 'withAI' ? (
-          <Paper
-            sx={(theme) => ({
-              borderRadius: 4,
-              overflow: 'hidden',
-              backgroundColor: theme.custom.surfaceContainer,
-              border: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-            })}
-          >
-            <AIEditorView
-              onApply={handleAIApply}
-              t={t}
-              currentUser={currentUser}
-              onLogin={() => setLoginOpen(true)}
-              onBack={() => setActiveNav('workspace')}
-            />
-          </Paper>
-        ) : (
-          <>
-            {railNavigation}
-            {drawerNavigation}
-          </>
-        )}
+        {railNavigation}
+        {drawerNavigation}
 
         <Box
           component="main"
@@ -1386,7 +1344,7 @@ export default function AppShell() {
           </Typography>
 
           <Typography variant="bodyMedium" color="text.secondary" sx={{ mb: 4, maxWidth: 280, lineHeight: 1.6 }}>
-            ログインすると、AI機能が使用できるようになります
+            ログインすると、プロジェクトを同期できるようになります
           </Typography>
 
           <Button
