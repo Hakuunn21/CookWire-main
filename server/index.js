@@ -129,10 +129,6 @@ const standardLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, try again later' },
-  // 信頼できるプロキシの背後にある場合のクライアント識別
-  keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress
-  },
   skip: (req) => req.path === '/health', // ヘルスチェックは除外
 })
 
@@ -198,7 +194,7 @@ app.get('/health', (req, res) => {
 app.get('/api/csrf-token', standardLimiter, getCsrfToken)
 
 // 許可されていないHTTPメソッドのブロック
-app.all('/api/*', (req, res, next) => {
+app.all('/api/(.*)', (req, res, next) => {
   const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
   if (!allowedMethods.includes(req.method)) {
     return res.status(405).json({ error: 'Method not allowed' })
