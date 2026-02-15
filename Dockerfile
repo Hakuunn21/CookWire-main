@@ -21,7 +21,10 @@ RUN apk add --no-cache python3 make g++
 
 # Install production dependencies only
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev --no-audit --no-fund
+
+# Verify critical dependencies are installed
+RUN node -e "require('helmet')"
 
 # Remove build tools to keep image small
 RUN apk del python3 make g++
