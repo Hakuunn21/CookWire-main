@@ -355,6 +355,12 @@ app.get('*', (req, res, next) => {
   })
 })
 
+// 最終的な404ハンドラー（コード側かプロキシ側かを判別するため）
+app.use((req, res) => {
+  console.log(`[Diagnostic] Final 404 Handler hit for: ${req.method} ${req.path}`)
+  res.status(404).send('CookWire Code-side 404')
+})
+
 // エラーハンドラー
 // eslint-disable-next-line no-unused-vars
 app.use((error, req, res, next) => {
