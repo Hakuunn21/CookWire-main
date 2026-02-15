@@ -194,7 +194,7 @@ app.get('/health', (req, res) => {
 app.get('/api/csrf-token', standardLimiter, getCsrfToken)
 
 // 許可されていないHTTPメソッドのブロック
-app.all('/api/(.*)', (req, res, next) => {
+app.all('/api/:path*', (req, res, next) => {
   const allowedMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']
   if (!allowedMethods.includes(req.method)) {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -326,7 +326,7 @@ app.use('/api', (req, res) => {
 
 // SPAフォールバック - API以外のルートはindex.htmlにフォールバック
 // パストラバーサル対策：パスを検証
-app.get('(.*)', (req, res, next) => {
+app.get('/:path*', (req, res, next) => {
   // APIリクエストは除外
   if (req.path.startsWith('/api/')) {
     return next()
