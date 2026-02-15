@@ -29,6 +29,9 @@ const TRUST_PROXY = env.TRUST_PROXY
 
 const app = express()
 
+// 最優先のデバッグ用ルート（ポート疎通確認用）
+app.get('/debug-ping', (req, res) => res.send('pong'))
+
 // Trust Proxy設定（レート制限の正確性のため）
 // 本番環境ではプロキシを信頼する必要がある場合がある
 if (TRUST_PROXY === 'true') {
