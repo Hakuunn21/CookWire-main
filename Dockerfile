@@ -34,13 +34,13 @@ COPY server ./server
 
 # Environment variables
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=3000
 ENV DATA_DIR=/app/data
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
-EXPOSE 3001
+EXPOSE 3000
 
 # Start the server
 CMD ["npm", "run", "server"]

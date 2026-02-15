@@ -23,11 +23,11 @@ Copy `.env.example` to `.env`.
 
 ### Frontend
 
-- `VITE_API_BASE_URL`: API base URL (default: `http://localhost:3001/api`)
+- `VITE_API_BASE_URL`: API base URL (default: `http://localhost:3000/api`)
 
 ### Backend
 
-- `PORT` (optional, default `3001`)
+- `PORT` (optional, default `3000`)
 - `DATA_DIR` (optional, default `./data`)
 - `DATABASE_PATH` (optional, default `./data/projects.db`)
 - `CORS_ALLOW_ORIGINS` (comma-separated origins, or `*`)
