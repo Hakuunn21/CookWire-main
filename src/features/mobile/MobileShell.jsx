@@ -3,7 +3,6 @@ import {
   Button,
   Chip,
   Divider,
-  Fab,
   IconButton,
   ListItemIcon,
   ListItemText,
@@ -13,34 +12,22 @@ import {
   Tab,
   Tabs,
   Typography,
-} from '@mui/material'
+} from "@mui/material";
 import {
-  PlayArrowRounded,
-  SaveRounded,
-  SearchRounded,
-  CodeRounded,
-  SettingsRounded,
-  FolderOpenRounded,
-  DarkModeRounded,
-  LightModeRounded,
-  MoreVertRounded,
-  KeyboardCommandKeyRounded,
-  FileDownloadRounded,
-  BuildRounded,
-  DragHandleRounded,
   LoginRounded,
   LogoutRounded,
   InfoOutlined,
   SecurityRounded,
   GavelRounded,
-} from '@mui/icons-material'
-import { memo, useCallback, useMemo, useRef, useState } from 'react'
-import MobileConsolePanel from './MobileConsolePanel'
-import PreviewPane from '../preview/PreviewPane'
+} from "@mui/icons-material";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
+import MobileConsolePanel from "./MobileConsolePanel";
+import PreviewPane from "../preview/PreviewPane";
+import { placeholderFor } from "../editor/editorUtils";
 
-const FILE_KEYS = ['html', 'css', 'js']
+const FILE_KEYS = ["html", "css", "js"];
 
-const TAB_LABELS = { html: 'HTML', css: 'CSS', js: 'JS' }
+const TAB_LABELS = { html: "HTML", css: "CSS", js: "JS" };
 
 const MobileShell = memo(function MobileShell({
   state,
@@ -61,83 +48,84 @@ const MobileShell = memo(function MobileShell({
   onLogin,
   onLogout,
 }) {
-  const [viewMode, setViewMode] = useState('editor') // 'editor' | 'preview'
-  const [menuAnchor, setMenuAnchor] = useState(null)
-  const editorRefs = useRef({ html: null, css: null, js: null })
+  const [viewMode, setViewMode] = useState("editor"); // 'editor' | 'preview'
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const editorRefs = useRef({ html: null, css: null, js: null });
 
-  const consoleOpen = state.workspacePrefs.mobileConsoleOpen ?? false
-  const activeFile = state.activeFile
+  const consoleOpen = state.workspacePrefs.mobileConsoleOpen ?? false;
+  const activeFile = state.activeFile;
   const activeLines = useMemo(
-    () => state.files[activeFile].split('\n').length,
+    () => state.files[activeFile].split("\n").length,
     [state.files, activeFile],
-  )
+  );
 
   const isFilesEmpty = useMemo(() => {
-    return Object.values(state.files).every((content) => !content.trim())
-  }, [state.files])
+    return Object.values(state.files).every((content) => !content.trim());
+  }, [state.files]);
 
   const registerRef = useCallback(
     (fileKey, node) => {
-      editorRefs.current[fileKey] = node
-      onRegisterEditorRef(fileKey, node)
+      editorRefs.current[fileKey] = node;
+      onRegisterEditorRef(fileKey, node);
     },
     [onRegisterEditorRef],
-  )
+  );
 
-
-
-  const handleTabChange = useCallback((_e, newValue) => {
-    if (newValue === 'preview') {
-      setViewMode('preview')
-    } else {
-      setViewMode('editor')
-      dispatch({ type: 'SET_ACTIVE_FILE', payload: newValue })
-    }
-  }, [dispatch])
+  const handleTabChange = useCallback(
+    (_e, newValue) => {
+      if (newValue === "preview") {
+        setViewMode("preview");
+      } else {
+        setViewMode("editor");
+        dispatch({ type: "SET_ACTIVE_FILE", payload: newValue });
+      }
+    },
+    [dispatch],
+  );
 
   // --- Drag-to-resize split removed ---
 
-  const handleMenuOpen = useCallback((e) => setMenuAnchor(e.currentTarget), [])
-  const handleMenuClose = useCallback(() => setMenuAnchor(null), [])
+  const handleMenuOpen = useCallback((e) => setMenuAnchor(e.currentTarget), []);
+  const handleMenuClose = useCallback(() => setMenuAnchor(null), []);
 
   const handleMenuAction = useCallback(
     (action) => {
-      handleMenuClose()
+      handleMenuClose();
       switch (action) {
-        case 'search':
-          onOpenSearch()
-          break
-        case 'commands':
-          onOpenCommands()
-          break
-        case 'projects':
-          onOpenProjects()
-          break
-        case 'settings':
-          onOpenSettings()
-          break
-        case 'minitool':
-          onOpenMinitool()
-          break
-        case 'format':
-          onFormat(state.activeFile)
-          break
-        case 'formatAll':
-          onFormat('all')
-          break
-        case 'save':
-          onSaveLocationOpen()
-          break
-        case 'download':
-          onSaveLocationOpen()
-          break
-        case 'company':
-        case 'privacy':
-        case 'terms':
-          onOpenInfo(action)
-          break
+        case "search":
+          onOpenSearch();
+          break;
+        case "commands":
+          onOpenCommands();
+          break;
+        case "projects":
+          onOpenProjects();
+          break;
+        case "settings":
+          onOpenSettings();
+          break;
+        case "minitool":
+          onOpenMinitool();
+          break;
+        case "format":
+          onFormat(state.activeFile);
+          break;
+        case "formatAll":
+          onFormat("all");
+          break;
+        case "save":
+          onSaveLocationOpen();
+          break;
+        case "download":
+          onSaveLocationOpen();
+          break;
+        case "company":
+        case "privacy":
+        case "terms":
+          onOpenInfo(action);
+          break;
         default:
-          break
+          break;
       }
     },
     [
@@ -152,29 +140,29 @@ const MobileShell = memo(function MobileShell({
       state.activeFile,
       onOpenInfo,
     ],
-  )
+  );
 
   const handleToggleConsole = useCallback(() => {
-    dispatch({ type: 'SET_MOBILE_CONSOLE_OPEN', payload: !consoleOpen })
-  }, [consoleOpen, dispatch])
+    dispatch({ type: "SET_MOBILE_CONSOLE_OPEN", payload: !consoleOpen });
+  }, [consoleOpen, dispatch]);
 
   return (
     <Box
       sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        width: '100%',
-        overflow: 'hidden',
-        bgcolor: 'background.default',
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        width: "100%",
+        overflow: "hidden",
+        bgcolor: "background.default",
       }}
     >
       {/* ── Mobile Header ── */}
       <Paper
         square
         sx={(theme) => ({
-          display: 'flex',
-          alignItems: 'center',
+          display: "flex",
+          alignItems: "center",
           gap: 0.5,
           px: 1,
           py: 0.75,
@@ -196,7 +184,7 @@ const MobileShell = memo(function MobileShell({
             flexShrink: 0,
           }}
         >
-          {t('appName')}
+          {t("appName")}
         </Typography>
 
         <Divider orientation="vertical" flexItem sx={{ mx: 0.25 }} />
@@ -206,28 +194,28 @@ const MobileShell = memo(function MobileShell({
           component="input"
           value={state.title}
           onChange={(e) =>
-            dispatch({ type: 'SET_TITLE', payload: e.target.value })
+            dispatch({ type: "SET_TITLE", payload: e.target.value })
           }
           spellCheck={false}
           sx={{
             flex: 1,
             minWidth: 0,
-            border: 'none',
-            outline: 'none',
-            background: 'transparent',
-            color: 'text.secondary',
+            border: "none",
+            outline: "none",
+            background: "transparent",
+            color: "text.secondary",
             fontFamily: '"Google Sans", sans-serif',
             fontSize: 13,
             fontWeight: 500,
             px: 0.5,
             py: 0.25,
-            '&:focus': { color: 'text.primary' },
+            "&:focus": { color: "text.primary" },
           }}
         />
 
         {/* Theme toggle */}
         <IconButton size="small" onClick={onToggleTheme} sx={{ p: 0.5 }}>
-          {state.themeMode === 'dark' ? (
+          {state.themeMode === "dark" ? (
             <LightModeRounded sx={{ fontSize: 20 }} />
           ) : (
             <DarkModeRounded sx={{ fontSize: 20 }} />
@@ -241,7 +229,7 @@ const MobileShell = memo(function MobileShell({
             if (isFilesEmpty) {
               // onOpenProjects()
             } else {
-              onSaveLocationOpen()
+              onSaveLocationOpen();
             }
           }}
           disabled={isFilesEmpty || state.cloud.saving}
@@ -266,8 +254,8 @@ const MobileShell = memo(function MobileShell({
           size="small"
           startIcon={<PlayArrowRounded />}
           onClick={() => {
-            onRun()
-            setViewMode('preview')
+            onRun();
+            setViewMode("preview");
           }}
           sx={{
             minWidth: 0,
@@ -279,15 +267,15 @@ const MobileShell = memo(function MobileShell({
             flexShrink: 0,
           }}
         >
-          {t('run')}
+          {t("run")}
         </Button>
       </Paper>
 
       {/* ── Editor Tabs ── */}
       <Box
         sx={(theme) => ({
-          display: 'flex',
-          alignItems: 'center',
+          display: "flex",
+          alignItems: "center",
           px: 1,
           minHeight: 40,
           backgroundColor: theme.custom.surfaceContainer,
@@ -295,13 +283,13 @@ const MobileShell = memo(function MobileShell({
         })}
       >
         <Tabs
-          value={viewMode === 'preview' ? 'preview' : activeFile}
+          value={viewMode === "preview" ? "preview" : activeFile}
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons={false}
           sx={{
             minHeight: 36,
-            '& .MuiTabs-flexContainer': { gap: 0.25 },
+            "& .MuiTabs-flexContainer": { gap: 0.25 },
           }}
         >
           {FILE_KEYS.map((key) => (
@@ -317,13 +305,13 @@ const MobileShell = memo(function MobileShell({
                 py: 0.5,
                 fontSize: 12,
                 fontWeight: 700,
-                textTransform: 'none',
+                textTransform: "none",
               }}
             />
           ))}
           <Tab
             value="preview"
-            label={t('preview') || 'Preview'}
+            label={t("preview") || "Preview"}
             disableRipple
             sx={{
               minHeight: 32,
@@ -332,22 +320,22 @@ const MobileShell = memo(function MobileShell({
               py: 0.5,
               fontSize: 12,
               fontWeight: 700,
-              textTransform: 'none',
+              textTransform: "none",
             }}
           />
         </Tabs>
 
         <Box sx={{ flex: 1 }} />
 
-        {viewMode !== 'preview' && (
+        {viewMode !== "preview" && (
           <Chip
-            label={`${activeLines} ${t('lines')}`}
+            label={`${activeLines} ${t("lines")}`}
             size="small"
             variant="outlined"
             sx={{
               height: 22,
               borderRadius: 999,
-              '& .MuiChip-label': { px: 1, fontSize: 10, fontWeight: 600 },
+              "& .MuiChip-label": { px: 1, fontSize: 10, fontWeight: 600 },
             }}
           />
         )}
@@ -357,64 +345,65 @@ const MobileShell = memo(function MobileShell({
       <Box
         sx={{
           flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
           minHeight: 0,
-          overflow: 'hidden',
+          overflow: "hidden",
         }}
       >
         {/* Editor Panel */}
         <Box
           sx={(theme) => ({
             flex: 1,
-            display: viewMode === 'editor' ? 'flex' : 'none',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            display: viewMode === "editor" ? "flex" : "none",
+            flexDirection: "column",
+            overflow: "hidden",
             backgroundColor: theme.custom.workspaceCanvas,
           })}
         >
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' }}>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflow: "hidden",
+              position: "relative",
+            }}
+          >
             {FILE_KEYS.map((fileKey) => {
-              const visible = activeFile === fileKey
+              const visible = activeFile === fileKey;
               return (
                 <Box
                   key={fileKey}
                   role="tabpanel"
                   hidden={!visible}
                   sx={{
-                    display: visible ? 'block' : 'none',
-                    height: '100%',
+                    display: visible ? "block" : "none",
+                    height: "100%",
                   }}
                 >
                   <Box
                     component="textarea"
                     ref={(node) => registerRef(fileKey, node)}
-                    aria-label={`${t('ariaEditor')} ${fileKey}`}
+                    aria-label={`${t("ariaEditor")} ${fileKey}`}
                     value={state.files[fileKey]}
                     onChange={(e) =>
                       dispatch({
-                        type: 'SET_FILE_CONTENT',
+                        type: "SET_FILE_CONTENT",
                         payload: { file: fileKey, value: e.target.value },
                       })
                     }
                     spellCheck={false}
                     className="editor-textarea"
-                    placeholder={
-                      fileKey === 'html'
-                        ? '<section>...</section>'
-                        : fileKey === 'css'
-                          ? '.class { ... }'
-                          : 'console.log()'
-                    }
+                    placeholder={placeholderFor(fileKey)}
                     style={{
-                      fontFamily: '"Google Sans", monospace',
+                      fontFamily: '"Google Sans", sans-serif',
                       fontSize: `${state.editorPrefs.fontSize}px`,
                       lineHeight: state.editorPrefs.lineHeight,
-                      color: 'inherit',
+                      color: "inherit",
                     }}
                   />
                 </Box>
-              )
+              );
             })}
           </Box>
         </Box>
@@ -423,13 +412,13 @@ const MobileShell = memo(function MobileShell({
         <Box
           sx={(theme) => ({
             flex: 1,
-            display: viewMode === 'preview' ? 'flex' : 'none',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            display: viewMode === "preview" ? "flex" : "none",
+            flexDirection: "column",
+            overflow: "hidden",
             backgroundColor: theme.custom.workspaceCanvas,
           })}
         >
-          <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+          <Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
             <PreviewPane
               previewFiles={state.previewFiles}
               previewVersion={state.previewVersion}
@@ -441,7 +430,6 @@ const MobileShell = memo(function MobileShell({
         </Box>
       </Box>
 
-
       {/* ── Console Panel ── */}
       <MobileConsolePanel
         open={consoleOpen}
@@ -452,9 +440,9 @@ const MobileShell = memo(function MobileShell({
       {/* ── Safe area bottom spacer ── */}
       <Box
         sx={{
-          height: 'env(safe-area-inset-bottom)',
+          height: "env(safe-area-inset-bottom)",
           flexShrink: 0,
-          bgcolor: 'background.paper',
+          bgcolor: "background.paper",
         }}
       />
 
@@ -463,8 +451,8 @@ const MobileShell = memo(function MobileShell({
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
         slotProps={{
           paper: {
             sx: {
@@ -475,38 +463,56 @@ const MobileShell = memo(function MobileShell({
           },
         }}
       >
-        <MenuItem onClick={() => handleMenuAction('search')}>
-          <ListItemIcon><SearchRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('searchReplace')}</ListItemText>
+        <MenuItem onClick={() => handleMenuAction("search")}>
+          <ListItemIcon>
+            <SearchRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("searchReplace")}</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleMenuAction('commands')}>
-          <ListItemIcon><KeyboardCommandKeyRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('commandPalette')}</ListItemText>
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={() => handleMenuAction('format')}>
-          <ListItemIcon><CodeRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('formatCurrent')}</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleMenuAction('formatAll')}>
-          <ListItemIcon><CodeRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('formatAll')}</ListItemText>
+        <MenuItem onClick={() => handleMenuAction("commands")}>
+          <ListItemIcon>
+            <KeyboardCommandKeyRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("commandPalette")}</ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem disabled={true} onClick={() => handleMenuAction('projects')}>
-          <ListItemIcon><FolderOpenRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('projects') || 'Projects (Coming soon)'}</ListItemText>
+        <MenuItem onClick={() => handleMenuAction("format")}>
+          <ListItemIcon>
+            <CodeRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("formatCurrent")}</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleMenuAction('minitool')}>
-          <ListItemIcon><BuildRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('minitool')}</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={() => handleMenuAction('settings')}>
-          <ListItemIcon><SettingsRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('settings')}</ListItemText>
+        <MenuItem onClick={() => handleMenuAction("formatAll")}>
+          <ListItemIcon>
+            <CodeRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("formatAll")}</ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => handleMenuAction(isFilesEmpty ? 'projects' : 'save')}>
+        <MenuItem disabled={true} onClick={() => handleMenuAction("projects")}>
+          <ListItemIcon>
+            <FolderOpenRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>
+            {t("projects") || "Projects (Coming soon)"}
+          </ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleMenuAction("minitool")}>
+          <ListItemIcon>
+            <BuildRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("minitool")}</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => handleMenuAction("settings")}>
+          <ListItemIcon>
+            <SettingsRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("settings")}</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem
+          onClick={() => handleMenuAction(isFilesEmpty ? "projects" : "save")}
+        >
           <ListItemIcon>
             {isFilesEmpty ? (
               <FolderOpenRounded fontSize="small" />
@@ -515,38 +521,53 @@ const MobileShell = memo(function MobileShell({
             )}
           </ListItemIcon>
           <ListItemText>
-            {isFilesEmpty ? (t('projects') || 'Projects (Coming soon)') : t('saveProject')}
+            {isFilesEmpty
+              ? t("projects") || "Projects (Coming soon)"
+              : t("saveProject")}
           </ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => handleMenuAction('company')}>
-          <ListItemIcon><InfoOutlined fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('company')}</ListItemText>
+        <MenuItem onClick={() => handleMenuAction("company")}>
+          <ListItemIcon>
+            <InfoOutlined fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("company")}</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleMenuAction('privacy')}>
-          <ListItemIcon><SecurityRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('privacy')}</ListItemText>
+        <MenuItem onClick={() => handleMenuAction("privacy")}>
+          <ListItemIcon>
+            <SecurityRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("privacy")}</ListItemText>
         </MenuItem>
-        <MenuItem onClick={() => handleMenuAction('terms')}>
-          <ListItemIcon><GavelRounded fontSize="small" /></ListItemIcon>
-          <ListItemText>{t('terms')}</ListItemText>
+        <MenuItem onClick={() => handleMenuAction("terms")}>
+          <ListItemIcon>
+            <GavelRounded fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{t("terms")}</ListItemText>
         </MenuItem>
         <Divider />
-        <MenuItem disabled={true} onClick={() => {
-          handleMenuClose()
-          if (currentUser) onLogout()
-          else onLogin()
-        }}>
+        <MenuItem
+          disabled={true}
+          onClick={() => {
+            handleMenuClose();
+            if (currentUser) onLogout();
+            else onLogin();
+          }}
+        >
           <ListItemIcon>
-            {currentUser ? <LogoutRounded fontSize="small" /> : <LoginRounded fontSize="small" />}
+            {currentUser ? (
+              <LogoutRounded fontSize="small" />
+            ) : (
+              <LoginRounded fontSize="small" />
+            )}
           </ListItemIcon>
           <ListItemText>
-            {currentUser ? 'Log out' : (t('login') || 'Log in (Coming soon)')}
+            {currentUser ? "Log out" : t("login") || "Log in (Coming soon)"}
           </ListItemText>
         </MenuItem>
       </Menu>
     </Box>
-  )
-})
+  );
+});
 
-export default MobileShell
+export default MobileShell;

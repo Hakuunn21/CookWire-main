@@ -1,22 +1,22 @@
 /**
  * CSRF Protection Module
- * 
+ *
  * Implements Double Submit Cookie pattern for CSRF protection.
  * This is suitable for SPAs that use custom headers for authentication.
  */
 
-import crypto from 'node:crypto'
+import crypto from "node:crypto";
 
-const CSRF_TOKEN_LENGTH = 32
-const CSRF_HEADER = 'x-csrf-token'
-const CSRF_COOKIE_NAME = 'csrf_token'
+const CSRF_TOKEN_LENGTH = 32;
+const CSRF_HEADER = "x-csrf-token";
+const CSRF_COOKIE_NAME = "csrf_token";
 
 /**
  * Generate a cryptographically secure CSRF token
  * @returns {string}
  */
 export function generateCsrfToken() {
-  return crypto.randomBytes(CSRF_TOKEN_LENGTH).toString('base64url')
+  return crypto.randomBytes(CSRF_TOKEN_LENGTH).toString("base64url");
 }
 
 /**
@@ -24,27 +24,27 @@ export function generateCsrfToken() {
  * Should be applied to all routes
  */
 export function csrfCookieMiddleware(req, res, next) {
-  // Only set if not already present
-  if (!req.headers.cookie || !req.headers.cookie.includes(CSRF_COOKIE_NAME)) {
-    const token = generateCsrfToken()
+  // Only set if not already present (use req.cookies parsed by cookie-parser)
+  if (!req.cookies || !req.cookies[CSRF_COOKIE_NAME]) {
+    const token = generateCsrfToken();
     // Set httpOnly cookie (cannot be read by JavaScript)
     res.cookie(CSRF_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      path: '/',
-    })
+      path: "/",
+    });
     // Also set a non-httpOnly cookie for the SPA to read
-    res.cookie('csrf_token_public', token, {
+    res.cookie("csrf_token_public", token, {
       httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
       maxAge: 24 * 60 * 60 * 1000,
-      path: '/',
-    })
+      path: "/",
+    });
   }
-  next()
+  next();
 }
 
 /**
@@ -53,54 +53,54 @@ export function csrfCookieMiddleware(req, res, next) {
  */
 export function csrfProtectionMiddleware(req, res, next) {
   // Skip for safe methods
-  const safeMethods = ['GET', 'HEAD', 'OPTIONS']
+  const safeMethods = ["GET", "HEAD", "OPTIONS"];
   if (safeMethods.includes(req.method)) {
-    return next()
+    return next();
   }
 
   // Skip for health check
-  if (req.path === '/health') {
-    return next()
+  if (req.path === "/health") {
+    return next();
   }
 
-  const tokenFromHeader = req.headers[CSRF_HEADER]
-  const cookies = parseCookies(req.headers.cookie)
-  const tokenFromCookie = cookies[CSRF_COOKIE_NAME]
+  const tokenFromHeader = req.headers[CSRF_HEADER];
+  const cookies = parseCookies(req.headers.cookie);
+  const tokenFromCookie = cookies[CSRF_COOKIE_NAME];
 
   // Validate presence
   if (!tokenFromHeader || !tokenFromCookie) {
-    return res.status(403).json({ 
-      error: 'CSRF token missing',
-      code: 'CSRF_MISSING'
-    })
+    return res.status(403).json({
+      error: "CSRF token missing",
+      code: "CSRF_MISSING",
+    });
   }
 
   // Use timing-safe comparison to prevent timing attacks
   try {
-    const headerBuf = Buffer.from(tokenFromHeader, 'base64url')
-    const cookieBuf = Buffer.from(tokenFromCookie, 'base64url')
-    
+    const headerBuf = Buffer.from(tokenFromHeader, "base64url");
+    const cookieBuf = Buffer.from(tokenFromCookie, "base64url");
+
     if (headerBuf.length !== cookieBuf.length) {
-      return res.status(403).json({ 
-        error: 'CSRF token invalid',
-        code: 'CSRF_INVALID'
-      })
+      return res.status(403).json({
+        error: "CSRF token invalid",
+        code: "CSRF_INVALID",
+      });
     }
 
     if (!crypto.timingSafeEqual(headerBuf, cookieBuf)) {
-      return res.status(403).json({ 
-        error: 'CSRF token mismatch',
-        code: 'CSRF_MISMATCH'
-      })
+      return res.status(403).json({
+        error: "CSRF token mismatch",
+        code: "CSRF_MISMATCH",
+      });
     }
   } catch {
-    return res.status(403).json({ 
-      error: 'CSRF token invalid',
-      code: 'CSRF_INVALID'
-    })
+    return res.status(403).json({
+      error: "CSRF token invalid",
+      code: "CSRF_INVALID",
+    });
   }
 
-  next()
+  next();
 }
 
 /**
@@ -109,15 +109,15 @@ export function csrfProtectionMiddleware(req, res, next) {
  * @returns {Object}
  */
 function parseCookies(cookieHeader) {
-  if (!cookieHeader) return {}
-  
-  return cookieHeader.split(';').reduce((cookies, cookie) => {
-    const [name, value] = cookie.trim().split('=')
+  if (!cookieHeader) return {};
+
+  return cookieHeader.split(";").reduce((cookies, cookie) => {
+    const [name, value] = cookie.trim().split("=");
     if (name && value) {
-      cookies[name] = decodeURIComponent(value)
+      cookies[name] = decodeURIComponent(value);
     }
-    return cookies
-  }, {})
+    return cookies;
+  }, {});
 }
 
 /**
@@ -125,25 +125,25 @@ function parseCookies(cookieHeader) {
  * Endpoint handler to provide token to authenticated clients
  */
 export function getCsrfToken(req, res) {
-  const token = generateCsrfToken()
-  
+  const token = generateCsrfToken();
+
   res.cookie(CSRF_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
     maxAge: 24 * 60 * 60 * 1000,
-    path: '/',
-  })
-  
-  res.cookie('csrf_token_public', token, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 24 * 60 * 60 * 1000,
-    path: '/',
-  })
+    path: "/",
+  });
 
-  res.json({ csrfToken: token })
+  res.cookie("csrf_token_public", token, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+
+  res.json({ csrfToken: token });
 }
 
-export { CSRF_HEADER, CSRF_COOKIE_NAME }
+export { CSRF_HEADER, CSRF_COOKIE_NAME };
