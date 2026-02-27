@@ -12,7 +12,12 @@ import { fileURLToPath } from 'url'
 import { createProjectsRepository } from './storage/projectsRepository.js'
 import { requireOwner } from './middleware/auth.js'
 import { validateEnv } from './security/envValidator.js'
-import { csrfCookieMiddleware, csrfProtectionMiddleware, getCsrfToken, CSRF_HEADER } from './security/csrf.js'
+import {
+  csrfCookieMiddleware,
+  csrfProtectionMiddleware,
+  getCsrfToken,
+  CSRF_HEADER,
+} from './security/csrf.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -26,15 +31,13 @@ const DATA_DIR = env.DATA_DIR
 const DATABASE_PATH = env.DATABASE_PATH
 const NODE_ENV = env.NODE_ENV
 const TRUST_PROXY = env.TRUST_PROXY
+const isProduction = NODE_ENV === 'production'
 
 const app = express()
 
-// 最優先のデバッグ用ルート（ポート疎通確認用）
-app.get('/debug-ping', (req, res) => res.send('pong'))
-
 // Trust Proxy設定（レート制限の正確性のため）
 // 本番環境ではプロキシを信頼する必要がある場合がある
-if (TRUST_PROXY === 'true') {
+if (TRUST_PROXY === 'true' || TRUST_PROXY === true) {
   app.set('trust proxy', 1)
 }
 
@@ -87,12 +90,13 @@ app.use(helmet({
 
 // CORS設定
 const allowedOrigins = CORS_ALLOW_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean)
+// ワイルドカードは validateEnv() で本番環境では拒否済み
 const corsOrigin = allowedOrigins.includes('*') ? '*' : allowedOrigins
 
 app.use(cors({
   origin: corsOrigin,
   credentials: true, // Required for CSRF cookie
-  allowedHeaders: ['Content-Type', 'X-CookWire-Owner-Key', 'x-csrf-token'],
+  allowedHeaders: ['Content-Type', 'X-CookWire-Owner-Key', CSRF_HEADER],
 }))
 app.use(express.json({ limit: '2mb' }))
 
@@ -100,7 +104,6 @@ app.use(express.json({ limit: '2mb' }))
 app.use(csrfCookieMiddleware)
 
 // ログ設定（センシティブデータを除去）
-const isProduction = NODE_ENV === 'production'
 morgan.token('body', (req) => {
   // リクエストボディからセンシティブデータをマスク
   if (req.body && typeof req.body === 'object') {
@@ -135,16 +138,23 @@ const standardLimiter = rateLimit({
 // 静的ファイル配信（本番環境用）
 const distPath = path.resolve(__dirname, '..', 'dist')
 
-// 起動時の診断ログ
-console.log(`[Diagnostic] Server starting...`)
-console.log(`[Diagnostic] __dirname: ${__dirname}`)
-console.log(`[Diagnostic] distPath: ${distPath}`)
-if (fs.existsSync(distPath)) {
-  console.log(`[Diagnostic] dist directory found.`)
-  const files = fs.readdirSync(distPath)
-  console.log(`[Diagnostic] dist contents: ${files.join(', ')}`)
+// 起動時の診断ログ（本番環境では最小限に抑える）
+if (!isProduction) {
+  console.log(`[Diagnostic] Server starting...`)
+  console.log(`[Diagnostic] __dirname: ${__dirname}`)
+  console.log(`[Diagnostic] distPath: ${distPath}`)
+  if (fs.existsSync(distPath)) {
+    console.log(`[Diagnostic] dist directory found.`)
+    const files = fs.readdirSync(distPath)
+    console.log(`[Diagnostic] dist contents: ${files.join(', ')}`)
+  } else {
+    console.error(`[Diagnostic] dist directory NOT FOUND at ${distPath}`)
+  }
 } else {
-  console.error(`[Diagnostic] dist directory NOT FOUND at ${distPath}`)
+  // 本番環境では dist の存在確認のみ（パスは出力しない）
+  if (!fs.existsSync(distPath)) {
+    console.error('[Server] dist directory not found. Did you run "npm run build"?')
+  }
 }
 
 // パストラバーサル対策付きの安全なファイル配信
@@ -189,6 +199,11 @@ app.get('/health', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
   return res.json({ ok: true })
 })
+
+// デバッグ用ポート疎通確認エンドポイント（開発環境のみ）
+if (!isProduction) {
+  app.get('/debug-ping', (req, res) => res.send('pong'))
+}
 
 // CSRF Token endpoint
 app.get('/api/csrf-token', standardLimiter, getCsrfToken)
@@ -334,27 +349,32 @@ app.get('/*path', (req, res, next) => {
 
   const indexPath = path.join(distPath, 'index.html')
 
-  // 診断ログ
-  if (NODE_ENV !== 'production' || req.path === '/') {
+  // 診断ログ（開発環境のみ）
+  if (!isProduction) {
     console.log(`[Diagnostic] Serving SPA fallback for: ${req.path}`)
   }
 
   res.sendFile(indexPath, (err) => {
     if (err) {
       if (err.code === 'ENOENT') {
-        console.error(`[Diagnostic] index.html not found at: ${indexPath}`)
+        // 本番環境ではパスを出力しない
+        console.error(isProduction
+          ? '[Server] index.html not found'
+          : `[Diagnostic] index.html not found at: ${indexPath}`)
       } else {
-        console.error(`[Diagnostic] Error sending index.html:`, err)
+        console.error('[Server] Error sending index.html:', isProduction ? err.code : err)
       }
       next(err)
     }
   })
 })
 
-// 最終的な404ハンドラー（コード側かプロキシ側かを判別するため）
+// 最終的な404ハンドラー
 app.use((req, res) => {
-  console.log(`[Diagnostic] Final 404 Handler hit for: ${req.method} ${req.path}`)
-  res.status(404).send('CookWire Code-side 404')
+  if (!isProduction) {
+    console.log(`[Diagnostic] Final 404 Handler hit for: ${req.method} ${req.path}`)
+  }
+  res.status(404).send('Not Found')
 })
 
 // エラーハンドラー
@@ -374,13 +394,16 @@ app.use((error, req, res, next) => {
 const server = app.listen(PORT, () => {
   console.log(`CookWire API listening on port ${PORT}`)
   console.log(`Environment: ${NODE_ENV}`)
-  console.log(`CORS origins: ${CORS_ALLOW_ORIGINS}`)
+  if (!isProduction) {
+    console.log(`CORS origins: ${CORS_ALLOW_ORIGINS}`)
+  }
 })
 
 // タイムアウト設定（Slowloris攻撃対策）
-server.timeout = 30000 // 30秒
-server.keepAliveTimeout = 5000 // 5秒
-server.headersTimeout = 60000 // 60秒
+// headersTimeout > keepAliveTimeout > (implicit request processing) の順序を守る
+server.keepAliveTimeout = 5000   // 5秒: Keep-Alive接続の維持時間
+server.headersTimeout = 10000    // 10秒: ヘッダー受信タイムアウト（keepAliveTimeout より大きく設定）
+server.timeout = 30000           // 30秒: リクエスト全体のタイムアウト
 
 // グレースフルシャットダウン
 process.on('SIGTERM', () => {

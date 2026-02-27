@@ -4,7 +4,8 @@ import path from 'node:path'
 import Database from 'better-sqlite3'
 
 // 安全なJSONパース（DoS対策）
-const MAX_JSON_SIZE = 10 * 1024 // 10KB
+// editorPrefs / workspacePrefs は小さいオブジェクトだが、余裕を持って 64KB に設定
+const MAX_JSON_SIZE = 64 * 1024 // 64KB
 
 function safeJsonParse(jsonString, defaultValue = {}) {
   if (!jsonString) return defaultValue

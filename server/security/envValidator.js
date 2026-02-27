@@ -2,6 +2,8 @@
  * 環境変数のバリデーションと検証
  */
 
+/* global process */
+
 const ENV_SCHEMA = {
   PORT: {
     type: 'number',
@@ -17,10 +19,15 @@ const ENV_SCHEMA = {
   CORS_ALLOW_ORIGINS: {
     type: 'string',
     default: 'http://localhost:5173,http://localhost:5177',
-    // 本番環境ではワイルドカードを警告
+    // 本番環境ではワイルドカードを拒否
     validate: (value, env) => {
       if (env.NODE_ENV === 'production' && value === '*') {
-        return { ok: false, warning: 'Wildcard CORS is not recommended in production' }
+        return {
+          ok: false,
+          error:
+            'Wildcard CORS (*) is not allowed in production. ' +
+            'Set CORS_ALLOW_ORIGINS to specific origins.',
+        }
       }
       return { ok: true }
     },
@@ -38,7 +45,8 @@ const ENV_SCHEMA = {
   },
   DATABASE_PATH: {
     type: 'string',
-    default: null, // DATA_DIRから自動生成
+    // 空文字列 = DATA_DIR から自動生成（index.js 側で処理）
+    default: '',
     validate: (value) => {
       if (value && value.includes('..')) {
         return { ok: false, error: 'DATABASE_PATH must not contain ".."' }
@@ -49,10 +57,56 @@ const ENV_SCHEMA = {
   TRUST_PROXY: {
     type: 'boolean',
     default: false,
-    // 本番環境でのみtrueにすべき警告
     validate: (value, env) => {
       if (value === true && env.NODE_ENV !== 'production') {
-        return { ok: false, warning: 'TRUST_PROXY should be false in non-production environments' }
+        return {
+          ok: false,
+          warning: 'TRUST_PROXY should be false in non-production environments',
+        }
+      }
+      return { ok: true }
+    },
+  },
+  // CSRF署名用シークレット（本番環境では32文字以上必須）
+  CSRF_SECRET: {
+    type: 'string',
+    default: '',
+    validate: (value, env) => {
+      if (env.NODE_ENV === 'production' && (!value || value.length < 32)) {
+        return {
+          ok: false,
+          error:
+            'CSRF_SECRET must be set to at least 32 characters in production',
+        }
+      }
+      if (value && value.length > 0 && value.length < 32) {
+        return {
+          ok: false,
+          warning:
+            'CSRF_SECRET is shorter than 32 characters; a random per-process secret will be used instead',
+        }
+      }
+      return { ok: true }
+    },
+  },
+  // Owner Keyハッシュ用シークレット（本番環境では32文字以上必須）
+  OWNER_KEY_SECRET: {
+    type: 'string',
+    default: '',
+    validate: (value, env) => {
+      if (env.NODE_ENV === 'production' && (!value || value.length < 32)) {
+        return {
+          ok: false,
+          error:
+            'OWNER_KEY_SECRET must be set to at least 32 characters in production',
+        }
+      }
+      if (value && value.length > 0 && value.length < 32) {
+        return {
+          ok: false,
+          warning:
+            'OWNER_KEY_SECRET is shorter than 32 characters; a random per-process secret will be used instead',
+        }
       }
       return { ok: true }
     },
@@ -61,9 +115,10 @@ const ENV_SCHEMA = {
 
 function parseValue(value, type) {
   switch (type) {
-    case 'number':
+    case 'number': {
       const num = Number(value)
       return Number.isNaN(num) ? null : num
+    }
     case 'boolean':
       return value === 'true' || value === '1'
     case 'string':
@@ -80,9 +135,10 @@ export function validateEnv() {
 
   for (const [key, config] of Object.entries(ENV_SCHEMA)) {
     const rawValue = process.env[key]
-    let value = rawValue !== undefined ? parseValue(rawValue, config.type) : config.default
+    const value =
+      rawValue !== undefined ? parseValue(rawValue, config.type) : config.default
 
-    // バリデーション
+    // 数値範囲チェック
     if (value !== null && config.min !== undefined && value < config.min) {
       errors.push(`${key} must be >= ${config.min}`)
       continue
@@ -91,6 +147,7 @@ export function validateEnv() {
       errors.push(`${key} must be <= ${config.max}`)
       continue
     }
+    // 列挙型チェック
     if (config.type === 'enum' && !config.values.includes(value)) {
       errors.push(`${key} must be one of: ${config.values.join(', ')}`)
       continue
@@ -113,15 +170,20 @@ export function validateEnv() {
     validated[key] = value
   }
 
+  // DATABASE_PATH が空の場合は null を設定（index.js 側で DATA_DIR から生成）
+  if (!validated.DATABASE_PATH) {
+    validated.DATABASE_PATH = null
+  }
+
   // 結果の出力
   if (warnings.length > 0) {
     console.warn('\n⚠️  Environment Warnings:')
-    warnings.forEach(w => console.warn(`  - ${w}`))
+    warnings.forEach((w) => console.warn(`  - ${w}`))
   }
 
   if (errors.length > 0) {
     console.error('\n❌ Environment Errors:')
-    errors.forEach(e => console.error(`  - ${e}`))
+    errors.forEach((e) => console.error(`  - ${e}`))
     process.exit(1)
   }
 
